@@ -119,7 +119,8 @@ async def add_glossary_term(request: GlossaryTermRequest):
 
 # Mount static frontend files to root path
 frontend_dir = os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../frontend")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../frontend/dist")
 )
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="static")
+
