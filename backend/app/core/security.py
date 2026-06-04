@@ -31,8 +31,7 @@ def verify_sql_safe(sql_query: str) -> bool:
         exp.Alter,      
         exp.Create,     
         exp.Command,    
-        exp.Merge,      
-        exp.Truncate    
+        exp.Merge  
     )
 
     for stmt in statements: 
