@@ -13,6 +13,8 @@ from langgraph.graph import StateGraph, END
 from app.core.database import DatabaseManager
 from app.core.vector_store import VectorStoreManager
 from app.agents.state import AgentState
+from app.core.security import verify_sql_safe
+from app.core.pii_masker import PIIMasker
 
 
 llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", temperature=0.0)
@@ -101,11 +103,28 @@ async def execute_sql(state: AgentState) -> Dict[str, Any]:
     print("Agent Step: Executing SQL query...")
 
     sql = state["generated_sql"]
+    user_role = state.get("user_role", "general")
 
+    #Step - 01: AST security Guard check 
+    try: 
+        verify_sql_safe(sql)
+    except Exception as e: 
+        error_msg = str(e)
+        print(f"SQL execution blocked by security: {error_msg}")
+        return {
+            "execution_error": error_msg,
+            "query_results": None,
+            "retry_count": 3
+        }
+
+    #Step - 02: Database query execution
     try: 
         results = await db_manager.execute_query(sql)
         print("SQL executed successfully!")
-        return {"query_results": results, "execution_error": None}
+
+        #Step - 03: Dynamic PII masking filter 
+        masked_results = PIIMasker.mask_dataset(results, user_role)
+        return {"query_results": masked_results, "execution_error": None}
     except Exception as e: 
         error_msg = str(e)
         print(f"SQL execution failed: {error_msg}")

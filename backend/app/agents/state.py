@@ -2,6 +2,7 @@ from typing import TypedDict, List, Dict, Any, Optional
 
 class AgentState(TypedDict): 
     user_query: str
+    user_role: str
     relevant_tables: List[str]
     table_schemas: str
     glossary_terms: List[Dict[str, Any]]
