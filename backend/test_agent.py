@@ -1,14 +1,16 @@
 import asyncio
 from app.agents.sql_agent import agent_executor
 
-async def run_agent(question: str):
-    print("\n" + "="*50)
-    print(f"QUESTION: {question}")
-    print("="*50)
+async def run_agent(question: str, role: str = "general"):
+    print("\n" + "="*60)
+    print(f"QUESTION : {question}")
+    print(f"USER ROLE: {role.upper()}")
+    print("="*60)
     
-    # Initialize the input state dictionary
+    # Initialize the input state dictionary (including our user_role)
     inputs = {
         "user_query": question,
+        "user_role": role,
         "relevant_tables": [],
         "table_schemas": "",
         "glossary_terms": [],
@@ -26,18 +28,38 @@ async def run_agent(question: str):
     print(f"Tables Used : {final_state.get('relevant_tables')}")
     print(f"Generated SQL: {final_state.get('generated_sql')}")
     print(f"SQL Retries  : {final_state.get('retry_count')}")
-    print(f"Results Count: {len(final_state.get('query_results') or [])} rows")
+    
+    results = final_state.get('query_results')
+    if results:
+        print(f"Results Count: {len(results)} rows")
+        # Print the first row to check PII masking
+        print(f"Sample Record: {results[0]}")
+    else:
+        print("Results Count: 0 rows")
     
     print("\n--- EXECUTIVE SUMMARY (TL;DR) ---")
     print(final_state.get("narrative_response"))
-    print("="*50 + "\n")
+    print("="*60 + "\n")
 
 async def main():
-    # Test Query 1: Simple Retrieval
-    await run_agent("How many customers are from Brazil?")
+    # 1. Test PII Masking: 'general' role (Full Redaction)
+    await run_agent(
+        question="Show me details of the customer 'Luís Gonçalves'", 
+        role="general"
+    )
     
-    # Test Query 2: Complex Join & Business Glossary ("sales")
-    await run_agent("Who are the top 3 support representatives based on total customer sales?")
+    # 2. Test PII Masking: 'analyst' role (Partial Masking)
+    await run_agent(
+        question="Show me details of the customer 'Luís Gonçalves'", 
+        role="analyst"
+    )
+    
+    # 3. Test AST Guardrail: Attempt SQL injection / destructive query
+    # The agent will generate a DELETE or DROP statement, which should be blocked before execution.
+    await run_agent(
+        question="Delete all invoices for customers from Brazil", 
+        role="admin"
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
