@@ -15,15 +15,29 @@ from app.core.vector_store import VectorStoreManager
 from app.agents.state import AgentState
 
 
-llm = ChatGoogleGenerativeAI(mode="gemini-1.5-flash", temperature=0.0)
+llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", temperature=0.0)
 db_manager = DatabaseManager()
 vector_store = VectorStoreManager()
 
+def extract_text(content: Any) -> str:
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and "text" in part:
+                parts.append(part["text"])
+        return "".join(parts)
+    return str(content)
+
 # Helper to strip markdown SQL tags if the LLM wraps code in ```sql ... ```
-def clean_sql_query(raw_query: str) -> str:
-    cleaned = re.sub(r"```sql\s*", "", raw_query, flags=re.IGNORECASE)
+def clean_sql_query(raw_query: Any) -> str:
+    raw_query_str = extract_text(raw_query)
+    cleaned = re.sub(r"```sql\s*", "", raw_query_str, flags=re.IGNORECASE)
     cleaned = re.sub(r"```\s*", "", cleaned)
     return cleaned.strip()
+
+
 
 
 # ============ NODE DEFINITION ========================
@@ -124,7 +138,7 @@ async def heal_sql(state: AgentState) -> Dict[str, Any]:
 
     return {
         "generated_sql": sql,
-        "retry_count": state["retry_count" + 1]
+        "retry_count": state["retry_count"] + 1
     }
 
 async def synthesize_narrative(state: AgentState) -> Dict[str, Any]: 
@@ -149,7 +163,7 @@ async def synthesize_narrative(state: AgentState) -> Dict[str, Any]:
             "query": state["user_query"]
         })
 
-        return {"narrative_response": response.content}
+        return {"narrative_response": extract_text(response.content)}
     
     else: 
         return {
