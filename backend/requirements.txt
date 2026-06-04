@@ -10,3 +10,4 @@ chromadb>=0.4.24
 python-dotenv>=1.0.1
 pydantic>=2.6.0
 greenlet>=3.0.0
+sqlglot>=23.0.0
