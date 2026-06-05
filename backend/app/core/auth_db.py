@@ -82,6 +82,22 @@ class AuthDatabaseManager:
             FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
         );
         """
+        create_dashboard_widgets = """
+        CREATE TABLE IF NOT EXISTS dashboard_widgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            database_id TEXT,
+            title TEXT,
+            chart_type TEXT,
+            x_axis TEXT,
+            y_axis TEXT,
+            query TEXT,
+            generated_sql TEXT,
+            narrative_response TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """
         async with self.db_manager.engine.begin() as conn:
             await conn.execute(text(create_enterprises))
             await conn.execute(text(create_users))
@@ -100,6 +116,7 @@ class AuthDatabaseManager:
             await conn.execute(text(create_user_db_permissions))
             await conn.execute(text(create_chat_sessions))
             await conn.execute(text(create_chat_messages))
+            await conn.execute(text(create_dashboard_widgets))
             
             # Migrate: Grant default DB access to all existing users if user_database_permissions is empty or just do it for all users
             grant_default_migration = """
@@ -441,6 +458,69 @@ class AuthDatabaseManager:
         query = "UPDATE chat_sessions SET title = :title WHERE id = :session_id AND user_id = :user_id;"
         async with self.db_manager.engine.begin() as conn:
             result = await conn.execute(text(query), {"title": title.strip(), "session_id": session_id, "user_id": user_id})
+            return result.rowcount > 0
+
+    async def create_dashboard_widget(
+        self,
+        user_id: int,
+        database_id: str,
+        title: str,
+        chart_type: str,
+        x_axis: str,
+        y_axis: str,
+        query: str,
+        generated_sql: str,
+        narrative_response: str
+    ) -> int:
+        """Saves a pinned chart widget to the dashboard."""
+        insert_query = """
+        INSERT INTO dashboard_widgets (
+            user_id, database_id, title, chart_type, x_axis, y_axis, 
+            query, generated_sql, narrative_response
+        )
+        VALUES (
+            :user_id, :database_id, :title, :chart_type, :x_axis, :y_axis, 
+            :query, :generated_sql, :narrative_response
+        )
+        RETURNING id;
+        """
+        params = {
+            "user_id": user_id,
+            "database_id": database_id,
+            "title": title.strip(),
+            "chart_type": chart_type,
+            "x_axis": x_axis,
+            "y_axis": y_axis,
+            "query": query,
+            "generated_sql": generated_sql,
+            "narrative_response": narrative_response
+        }
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(insert_query), params)
+            row = result.fetchone()
+            if row:
+                return row[0]
+            # Fallback
+            select_query = "SELECT MAX(id) as max_id FROM dashboard_widgets WHERE user_id = :user_id;"
+            res = await self.db_manager.execute_query(select_query, {"user_id": user_id})
+            return res[0]["max_id"] if res else 1
+
+    async def get_dashboard_widgets(self, user_id: int, database_id: str) -> List[Dict[str, Any]]:
+        """Retrieves all dashboard widgets pinned by a user in the database connection."""
+        query = """
+        SELECT id, user_id, database_id, title, chart_type, x_axis, y_axis, 
+               query, generated_sql, narrative_response, created_at 
+        FROM dashboard_widgets 
+        WHERE user_id = :user_id AND database_id = :database_id 
+        ORDER BY id DESC;
+        """
+        return await self.db_manager.execute_query(query, {"user_id": user_id, "database_id": database_id})
+
+    async def delete_dashboard_widget(self, widget_id: int, user_id: int) -> bool:
+        """Deletes a pinned dashboard widget owned by a user."""
+        query = "DELETE FROM dashboard_widgets WHERE id = :id AND user_id = :user_id;"
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(query), {"id": widget_id, "user_id": user_id})
             return result.rowcount > 0
 
     async def close(self):

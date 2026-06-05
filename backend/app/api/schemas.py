@@ -82,3 +82,12 @@ class SetDatabasePermissionRequest(BaseModel):
 class SetUserDatabasePermissionRequest(BaseModel):
     database_id: str
     has_access: bool
+
+class CreateDashboardWidgetRequest(BaseModel):
+    title: str
+    chart_type: str
+    x_axis: str
+    y_axis: str
+    query: str
+    generated_sql: str
+    narrative_response: str

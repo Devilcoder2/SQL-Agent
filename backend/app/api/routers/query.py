@@ -7,7 +7,7 @@ from app.agents.sql_agent import agent_executor, db_manager, vector_store
 from app.core.auth import get_current_user, get_active_db, auth_db
 from app.core.database import get_db_manager
 from app.core.audit import audit_manager
-from app.api.schemas import QueryRequest, QueryResponse, GlossaryTermRequest, CreateChatSessionRequest
+from app.api.schemas import QueryRequest, QueryResponse, GlossaryTermRequest, CreateChatSessionRequest, CreateDashboardWidgetRequest
 
 router = APIRouter(tags=["Query & Metadata"])
 
@@ -219,6 +219,85 @@ async def run_query(
             pass
             
         raise HTTPException(status_code=500, detail=f"Agent execution error: {str(e)}")
+
+@router.post("/api/v1/dashboard")
+async def add_widget(
+    request: CreateDashboardWidgetRequest,
+    current_user: dict = Depends(get_current_user),
+    active_db: dict = Depends(get_active_db)
+):
+    try:
+        widget_id = await auth_db.create_dashboard_widget(
+            user_id=current_user["id"],
+            database_id=active_db["id"],
+            title=request.title,
+            chart_type=request.chart_type,
+            x_axis=request.x_axis,
+            y_axis=request.y_axis,
+            query=request.query,
+            generated_sql=request.generated_sql,
+            narrative_response=request.narrative_response
+        )
+        return {"status": "success", "id": widget_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to pin widget: {str(e)}")
+
+@router.delete("/api/v1/dashboard/{widget_id}")
+async def delete_widget(
+    widget_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        success = await auth_db.delete_dashboard_widget(widget_id, current_user["id"])
+        if not success:
+            raise HTTPException(status_code=404, detail="Widget not found or not owned by user.")
+        return {"status": "success", "message": "Widget unpinned successfully."}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete widget: {str(e)}")
+
+@router.get("/api/v1/dashboard")
+async def get_dashboard(
+    current_user: dict = Depends(get_current_user),
+    active_db: dict = Depends(get_active_db)
+):
+    try:
+        widgets = await auth_db.get_dashboard_widgets(current_user["id"], active_db["id"])
+        
+        # Real-time execution: run the SQL for each widget!
+        db = get_db_manager(active_db["url"])
+        
+        realtime_widgets = []
+        for w in widgets:
+            data_results = []
+            error_msg = None
+            sql = w["generated_sql"]
+            if sql:
+                try:
+                    data_results = await db.execute_query(sql)
+                except Exception as ex:
+                    error_msg = str(ex)
+                    
+            realtime_widgets.append({
+                "id": w["id"],
+                "user_id": w["user_id"],
+                "database_id": w["database_id"],
+                "title": w["title"],
+                "chart_type": w["chart_type"],
+                "x_axis": w["x_axis"],
+                "y_axis": w["y_axis"],
+                "query": w["query"],
+                "generated_sql": w["generated_sql"],
+                "narrative_response": w["narrative_response"],
+                "created_at": w["created_at"],
+                "results": data_results,
+                "error": error_msg
+            })
+            
+        return {"widgets": realtime_widgets}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard: {str(e)}")
 
 @router.get("/api/v1/tables")
 async def get_tables(active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):

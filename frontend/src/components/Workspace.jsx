@@ -8,6 +8,7 @@ import SchemaTab from './workspace/SchemaTab';
 import AlertsTab from './workspace/AlertsTab';
 import UsersTab from './workspace/UsersTab';
 import DatabasesTab from './workspace/DatabasesTab';
+import DashboardTab from './workspace/DashboardTab';
 
 export default function Workspace({ setView }) {
   // Navigation State
@@ -161,6 +162,16 @@ export default function Workspace({ setView }) {
               query={query}
               queryResults={queryResults}
               narrativeResponse={narrativeResponse}
+              generatedSql={generatedSql}
+            />
+          )}
+
+          {/* VIEW H: Dashboard View */}
+          {workspaceTab === 'dashboard' && (
+            <DashboardTab
+              fetch={fetchWrapper}
+              activeDatabaseId={activeDatabaseId}
+              setWorkspaceTab={setWorkspaceTab}
             />
           )}
 

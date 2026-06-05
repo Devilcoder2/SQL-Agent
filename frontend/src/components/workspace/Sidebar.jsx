@@ -40,6 +40,19 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
             <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Studio</span>
           </button>
 
+          <button
+            onClick={() => setWorkspaceTab('dashboard')}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+              workspaceTab === 'dashboard'
+                ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+            }`}
+            title="Dashboard Workspace"
+          >
+            <span className="material-symbols-outlined text-[22px]">space_dashboard</span>
+            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Dashboard</span>
+          </button>
+
           {user?.can_view_schema !== false && (
             <button
               onClick={() => setWorkspaceTab('schema')}
