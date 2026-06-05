@@ -26,7 +26,14 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from io import BytesIO
 from typing import List, Dict, Any, Optional,Set
+# pyrefly: ignore [missing-import]
+from fastapi import Depends
 from app.agents.sql_agent import agent_executor, db_manager, vector_store
+from app.core.auth import auth_db, hash_password, verify_password, create_access_token, get_current_user, require_admin
+from app.core.audit import AuditLogManager
+import time
+
+audit_manager = AuditLogManager()
 
 app = FastAPI(
     title="Enterprise AI SQL Agent API",
@@ -57,6 +64,28 @@ class QueryResponse(BaseModel):
     retry_count: int
     narrative_response: str
 
+class RegisterEnterpriseRequest(BaseModel):
+    enterprise_name: str
+    username: str
+    password: str
+
+class RegisterSingleRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    enterprise_name: Optional[str] = None
+
+class CreateEnterpriseUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str
+
+class UpdateUserRoleRequest(BaseModel):
+    role: str
+
 class GlossaryTermRequest(BaseModel):
     term: str
     definition: str
@@ -77,10 +106,11 @@ class PPTXExportRequest(BaseModel):
 
 
 @app.post("/api/v1/query", response_model=QueryResponse)
-async def run_query(request: QueryRequest):
+async def run_query(request: QueryRequest, current_user: dict = Depends(get_current_user)):
+    start_time = time.time()
     inputs = {
         "user_query": request.query,
-        "user_role": request.role,
+        "user_role": current_user["role"],
         "relevant_tables": [],
         "table_schemas": "",
         "glossary_terms": [],
@@ -90,8 +120,32 @@ async def run_query(request: QueryRequest):
         "retry_count": 0,
         "narrative_response": None
     }
+    
+    generated_sql = None
+    ast_status = "PASSED"
+    error_message = None
+    
     try:
         final_state = await agent_executor.ainvoke(inputs)
+        generated_sql = final_state.get("generated_sql")
+        error_message = final_state.get("execution_error")
+        
+        if error_message:
+            if "Security Exception" in error_message:
+                ast_status = "BLOCKED"
+            else:
+                ast_status = "FAILED"
+                
+        latency = int((time.time() - start_time) * 1000)
+        await audit_manager.log_query(
+            user_query=request.query,
+            user_role=current_user["role"],
+            generated_sql=generated_sql,
+            ast_status=ast_status,
+            error_message=error_message,
+            latency_ms=latency
+        )
+        
         return QueryResponse(
             user_query=final_state["user_query"],
             user_role=final_state["user_role"],
@@ -103,6 +157,15 @@ async def run_query(request: QueryRequest):
             narrative_response=final_state["narrative_response"] or ""
         )
     except Exception as e:
+        latency = int((time.time() - start_time) * 1000)
+        await audit_manager.log_query(
+            user_query=request.query,
+            user_role=current_user["role"],
+            generated_sql=generated_sql,
+            ast_status="FAILED",
+            error_message=str(e),
+            latency_ms=latency
+        )
         raise HTTPException(status_code=500, detail=f"Agent execution error: {str(e)}")
 
 @app.get("/api/v1/tables")
@@ -227,7 +290,7 @@ async def export_excel(req: ExcelExportRequest):
         summary_row = ["Total Summary"] + [""] * (len(headers) - 1)
         ws.append(summary_row)
         ws.cell(row=row_count + 2, column=1).font = Font(bold=True)
-        
+
         for idx, header in enumerate(headers):
             first_val = req.results[0][header]
             if isinstance(first_val, (int, float)) and idx > 0:
@@ -487,7 +550,17 @@ async def alert_scheduler_loop():
 
 @app.on_event("startup")
 async def startup_event():
+    await auth_db.initialize()
+    await audit_manager.initialize()
     asyncio.create_task(alert_scheduler_loop())
+    
+    # Check LangSmith Tracing Status
+    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+    api_key = os.getenv("LANGCHAIN_API_KEY", "")
+    if tracing_enabled and api_key:
+        print(f" LangSmith Agentic Tracing: ACTIVE (Project: {os.getenv('LANGCHAIN_PROJECT', 'sql-agent')})")
+    else:
+        print(" LangSmith Agentic Tracing: INACTIVE (Configure LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY in .env)")
 
 
 # --- Alerts Endpoints ---
@@ -584,6 +657,144 @@ async def slack_webhook(text: str = Form(...)):
             "response_type": "ephemeral",
             "text": f"⚠️ Agent execution failed: {str(e)}"
         }
+
+
+# --- Authentication & Enterprise User Administration Endpoints ---
+
+@app.post("/api/v1/auth/register-single")
+async def register_single(req: RegisterSingleRequest):
+    existing = await auth_db.get_user_by_username(req.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already registered.")
+    
+    hashed = hash_password(req.password)
+    user_id = await auth_db.create_user(
+        username=req.username,
+        password_hash=hashed,
+        role="admin",
+        tenant_type="single"
+    )
+    return {"status": "success", "message": "Single admin account registered.", "user_id": user_id}
+
+@app.post("/api/v1/auth/register-enterprise")
+async def register_enterprise(req: RegisterEnterpriseRequest):
+    existing_ent = await auth_db.get_enterprise_by_name(req.enterprise_name)
+    if existing_ent:
+        raise HTTPException(status_code=400, detail="Enterprise name already registered.")
+    
+    existing_user = await auth_db.get_user_by_username(req.username)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already registered.")
+
+    ent_id = await auth_db.create_enterprise(req.enterprise_name)
+    hashed = hash_password(req.password)
+    user_id = await auth_db.create_user(
+        username=req.username,
+        password_hash=hashed,
+        role="admin",
+        tenant_type="enterprise",
+        enterprise_id=ent_id
+    )
+    return {"status": "success", "message": "Enterprise registered successfully.", "enterprise_id": ent_id, "user_id": user_id}
+
+@app.post("/api/v1/auth/login")
+async def login(req: LoginRequest):
+    user = await auth_db.get_user_by_username(req.username)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+    
+    if not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+    
+    if user["tenant_type"] == "enterprise":
+        if req.enterprise_name and user["enterprise_name"].lower() != req.enterprise_name.lower().strip():
+            raise HTTPException(status_code=401, detail="Incorrect enterprise organization name.")
+    
+    token_data = {
+        "sub": user["username"],
+        "role": user["role"],
+        "tenant_type": user["tenant_type"],
+        "enterprise_id": user["enterprise_id"]
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"],
+            "tenant_type": user["tenant_type"],
+            "enterprise_name": user["enterprise_name"]
+        }
+    }
+
+@app.get("/api/v1/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {"user": current_user}
+
+@app.get("/api/v1/enterprise/users")
+async def get_enterprise_users(current_user: dict = Depends(get_current_user)):
+    if current_user["tenant_type"] != "enterprise":
+        raise HTTPException(status_code=400, detail="Not an enterprise account.")
+    users = await auth_db.get_enterprise_users(current_user["enterprise_id"])
+    return {"users": users}
+
+@app.post("/api/v1/enterprise/users")
+async def add_enterprise_user(req: CreateEnterpriseUserRequest, current_user: dict = Depends(require_admin)):
+    if current_user["tenant_type"] != "enterprise":
+        raise HTTPException(status_code=400, detail="Not an enterprise account.")
+    
+    existing = await auth_db.get_user_by_username(req.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    
+    hashed = hash_password(req.password)
+    new_user_id = await auth_db.create_user(
+        username=req.username,
+        password_hash=hashed,
+        role=req.role,
+        tenant_type="enterprise",
+        enterprise_id=current_user["enterprise_id"]
+    )
+    return {"status": "success", "message": f"User '{req.username}' created.", "user_id": new_user_id}
+
+@app.delete("/api/v1/enterprise/users/{user_id}")
+async def delete_enterprise_user(user_id: int, current_user: dict = Depends(require_admin)):
+    if current_user["tenant_type"] != "enterprise":
+        raise HTTPException(status_code=400, detail="Not an enterprise account.")
+    
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own administrative account.")
+    
+    deleted = await auth_db.delete_enterprise_user(user_id, current_user["enterprise_id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="User not found in this enterprise.")
+    
+    return {"status": "success", "message": "User deleted successfully."}
+
+@app.put("/api/v1/enterprise/users/{user_id}/role")
+async def update_enterprise_user_role(user_id: int, req: UpdateUserRoleRequest, current_user: dict = Depends(require_admin)):
+    if current_user["tenant_type"] != "enterprise":
+        raise HTTPException(status_code=400, detail="Not an enterprise account.")
+    
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot change your own administrative role.")
+    
+    updated = await auth_db.update_user_role(user_id, req.role, current_user["enterprise_id"])
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found in this enterprise.")
+    
+    return {"status": "success", "message": "User role updated successfully."}
+@app.get("/api/v1/audit")
+async def get_audit_logs(limit: int = 50, current_user: dict = Depends(get_current_user)):
+    try:
+        logs = await audit_manager.get_logs(limit=limit)
+        return {"logs": logs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch audit logs: {str(e)}")
+
 
 
 # Mount static frontend files to root path

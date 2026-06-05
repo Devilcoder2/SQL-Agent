@@ -1,12 +1,226 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 export default function Workspace({ setView }) {
-  // Navigation State: 'console' | 'studio' | 'schema' | 'warroom' | 'alerts'
+  // Navigation State: 'console' | 'studio' | 'schema' | 'warroom' | 'alerts' | 'users'
   const [workspaceTab, setWorkspaceTab] = useState("console");
+
+  // --- User Authentication State ---
+  const [token, setToken] = useState(() => localStorage.getItem("token") || "");
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [authMode, setAuthMode] = useState("login"); // 'login' | 'register'
+  const [tenantType, setTenantType] = useState("single"); // 'single' | 'enterprise'
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginEnterpriseName, setLoginEnterpriseName] = useState("");
+  const [regUsername, setRegUsername] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regEnterpriseName, setRegEnterpriseName] = useState("");
+  const [authError, setAuthError] = useState("");
+
+  // Enterprise Users Dashboard State
+  const [enterpriseUsers, setEnterpriseUsers] = useState([]);
+  const [newStaffUsername, setNewStaffUsername] = useState("");
+  const [newStaffPassword, setNewStaffPassword] = useState("");
+  const [newStaffRole, setNewStaffRole] = useState("general"); // 'general' | 'analyst' | 'admin'
+  const [isRegisteringStaff, setIsRegisteringStaff] = useState(false);
+
+  // Tab switch logs option
+  const [logViewTab, setLogViewTab] = useState("alarms"); // "alarms" | "audit"
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  // Local fetch shadowing global fetch to inject JWT Bearer Authorization header automatically
+  const fetch = async (url, options = {}) => {
+    const headers = options.headers || {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return window.fetch(url, { ...options, headers });
+  };
+
+  const handleLogin = async () => {
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      setAuthError("Username and password are required.");
+      return;
+    }
+    if (tenantType === 'enterprise' && !loginEnterpriseName.trim()) {
+      setAuthError("Enterprise name is required.");
+      return;
+    }
+    setAuthError("");
+    try {
+      const res = await window.fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginUsername,
+          password: loginPassword,
+          enterprise_name: tenantType === 'enterprise' ? loginEnterpriseName : null
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Authentication failed.");
+      }
+      const data = await res.json();
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setToken(data.access_token);
+      setUser(data.user);
+      setRole(data.user.role);
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!regUsername.trim() || !regPassword.trim()) {
+      setAuthError("Username and password are required.");
+      return;
+    }
+    if (tenantType === 'enterprise' && !regEnterpriseName.trim()) {
+      setAuthError("Enterprise name is required.");
+      return;
+    }
+    setAuthError("");
+    try {
+      const url = tenantType === 'enterprise' 
+        ? "/api/v1/auth/register-enterprise" 
+        : "/api/v1/auth/register-single";
+      
+      const body = tenantType === 'enterprise'
+        ? { enterprise_name: regEnterpriseName, username: regUsername, password: regPassword }
+        : { username: regUsername, password: regPassword };
+
+      const res = await window.fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Registration failed.");
+      }
+      
+      setLoginUsername(regUsername);
+      setLoginPassword(regPassword);
+      if (tenantType === 'enterprise') setLoginEnterpriseName(regEnterpriseName);
+      setAuthMode("login");
+      alert("Registration successful! Please login.");
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken("");
+    setUser(null);
+    setRole("general");
+    setWorkspaceTab("console");
+  };
+
+  const fetchEnterpriseUsers = async () => {
+    if (!token || user?.tenant_type !== 'enterprise') return;
+    try {
+      const res = await fetch("/api/v1/enterprise/users");
+      if (res.ok) {
+        const data = await res.json();
+        setEnterpriseUsers(data.users || []);
+      }
+    } catch (err) {
+      console.error("Error loading enterprise users:", err);
+    }
+  };
+
+  const handleCreateEnterpriseUser = async () => {
+    if (!newStaffUsername.trim() || !newStaffPassword.trim()) {
+      alert("Username and password are required.");
+      return;
+    }
+    setIsRegisteringStaff(true);
+    try {
+      const res = await fetch("/api/v1/enterprise/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: newStaffUsername,
+          password: newStaffPassword,
+          role: newStaffRole
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to create user.");
+      }
+      setNewStaffUsername("");
+      setNewStaffPassword("");
+      alert(`User "${newStaffUsername}" created successfully.`);
+      fetchEnterpriseUsers();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsRegisteringStaff(false);
+    }
+  };
+
+  const handleDeleteEnterpriseUser = async (userId) => {
+    if (userId === user?.id) {
+      alert("You cannot delete your own administrative account.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await fetch(`/api/v1/enterprise/users/${userId}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to delete user.");
+      }
+      fetchEnterpriseUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdateEnterpriseUserRole = async (userId, newRole) => {
+    if (userId === user?.id) {
+      alert("You cannot change your own role.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/enterprise/users/${userId}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to update role.");
+      }
+      fetchEnterpriseUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   // State variables
   const [query, setQuery] = useState("Who are the top 3 support representatives based on total customer sales?");
-  const [role, setRole] = useState("general");
+  const [role, setRole] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      return u ? u.role : "general";
+    } catch {
+      return "general";
+    }
+  });
   const [isExecuting, setIsExecuting] = useState(false);
   
   // Database Introspection State
@@ -88,18 +302,40 @@ export default function Workspace({ setView }) {
     return () => clearInterval(interval);
   }, []);
 
+  const fetchAuditLogs = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/v1/audit?limit=30");
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error("Error loading audit logs:", err);
+    }
+  };
+
   // Sync Alerts & Logs in background (when on alerts tab)
   useEffect(() => {
     if (workspaceTab === 'alerts') {
       fetchAlerts();
       fetchAlertLogs();
+      fetchAuditLogs();
       const interval = setInterval(() => {
         fetchAlerts();
         fetchAlertLogs();
+        fetchAuditLogs();
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [workspaceTab]);
+  }, [workspaceTab, token]);
+
+  // Sync Enterprise Users
+  useEffect(() => {
+    if (workspaceTab === 'users') {
+      fetchEnterpriseUsers();
+    }
+  }, [workspaceTab, token]);
 
   // Handle WebSockets for real-time War Room cursor/card sync
   useEffect(() => {
@@ -664,6 +900,120 @@ export default function Workspace({ setView }) {
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  if (!token) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#020617] text-[#dae2fd] relative overflow-hidden font-sans select-text">
+        {/* Background Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none z-0" />
+        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-secondary/5 blur-[150px] pointer-events-none z-0" />
+
+        <div className="glass-card max-w-md w-full p-8 rounded-3xl border border-white/10 bg-[#0b1326]/60 backdrop-blur-xl shadow-2xl relative z-10 space-y-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
+              <span className="material-symbols-outlined text-[#020617] font-extrabold text-2xl">terminal</span>
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">AI SQL Agent Workspace</h2>
+            <p className="text-[#c3c6d7]/50 text-xs mt-1">Enterprise-grade secure natural language querying</p>
+          </div>
+
+          {/* Mode switch */}
+          <div className="grid grid-cols-2 gap-2 bg-[#020617] p-1 rounded-xl border border-white/5">
+            <button 
+              onClick={() => { setAuthMode('login'); setAuthError(""); }}
+              className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${authMode === 'login' ? 'bg-primary text-[#020617]' : 'bg-transparent text-white/50'}`}
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={() => { setAuthMode('register'); setAuthError(""); }}
+              className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${authMode === 'register' ? 'bg-primary text-[#020617]' : 'bg-transparent text-white/50'}`}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* Tenant Switch */}
+          <div className="grid grid-cols-2 gap-2 bg-[#020617]/50 p-1 rounded-xl border border-white/5">
+            <button 
+              onClick={() => { setTenantType('single'); setAuthError(""); }}
+              className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer border-none ${tenantType === 'single' ? 'bg-secondary/15 text-secondary border border-secondary/20' : 'bg-transparent text-white/30'}`}
+            >
+              Single User
+            </button>
+            <button 
+              onClick={() => { setTenantType('enterprise'); setAuthError(""); }}
+              className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer border-none ${tenantType === 'enterprise' ? 'bg-secondary/15 text-secondary border border-secondary/20' : 'bg-transparent text-white/30'}`}
+            >
+              Enterprise
+            </button>
+          </div>
+
+          {authError && (
+            <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-300 text-xs rounded-lg text-center font-medium">
+              {authError}
+            </div>
+          )}
+
+          {/* Auth forms */}
+          <div className="space-y-4">
+            {tenantType === 'enterprise' && (
+              <div>
+                <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Enterprise Name</label>
+                <input 
+                  type="text" 
+                  value={authMode === 'login' ? loginEnterpriseName : regEnterpriseName}
+                  onChange={e => authMode === 'login' ? setLoginEnterpriseName(e.target.value) : setRegEnterpriseName(e.target.value)}
+                  className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
+                  placeholder="e.g. Acme Corp"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Username</label>
+              <input 
+                type="text" 
+                value={authMode === 'login' ? loginUsername : regUsername}
+                onChange={e => authMode === 'login' ? setLoginUsername(e.target.value) : setRegUsername(e.target.value)}
+                className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
+                placeholder="e.g. john_doe"
+              />
+            </div>
+
+            <div>
+              <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Password</label>
+              <input 
+                type="password" 
+                value={authMode === 'login' ? loginPassword : regPassword}
+                onChange={e => authMode === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
+                className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
+                placeholder="••••••••"
+                onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleRegister())}
+              />
+            </div>
+
+            <button 
+              onClick={authMode === 'login' ? handleLogin : handleRegister}
+              className="w-full bg-gradient-to-r from-primary to-secondary text-[#020617] font-extrabold py-3 rounded-xl text-xs hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer border-none mt-2"
+            >
+              {authMode === 'login' ? 'Authenticate Session' : 'Create Account'}
+            </button>
+          </div>
+
+          <div className="text-center pt-2">
+            <button 
+              onClick={() => setView('landing')} 
+              className="text-[10px] text-white/40 hover:text-white/60 bg-transparent border-none cursor-pointer flex items-center gap-1.5 mx-auto"
+            >
+              <span className="material-symbols-outlined text-xs">arrow_back</span>
+              Back to Landing
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen flex bg-[#020617] text-[#dae2fd] overflow-hidden select-none font-sans">
       
@@ -744,6 +1094,21 @@ export default function Workspace({ setView }) {
               <span className="material-symbols-outlined text-[22px]">notifications_active</span>
               <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Alerts</span>
             </button>
+
+            {user?.role === 'admin' && user?.tenant_type === 'enterprise' && (
+              <button
+                onClick={() => setWorkspaceTab('users')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                  workspaceTab === 'users'
+                    ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                    : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+                }`}
+                title="Users Dashboard"
+              >
+                <span className="material-symbols-outlined text-[22px]">group</span>
+                <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Users</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -769,14 +1134,36 @@ export default function Workspace({ setView }) {
               {workspaceTab === 'schema' && '🗄️ Database Introspection'}
               {workspaceTab === 'warroom' && '🤝 Collaborative War Room'}
               {workspaceTab === 'alerts' && '🔔 Smoke Detector Alerts'}
+              {workspaceTab === 'users' && '👥 Enterprise Users Dashboard'}
             </span>
           </div>
 
           <div className="flex items-center gap-4">
+            {/* User Profile Info */}
+            <div className="flex items-center gap-2.5 bg-[#131b2e]/60 border border-white/5 rounded-xl px-3 py-1.5 text-xs select-none">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-[#020617] font-bold uppercase text-[10px]">
+                {user?.username ? user.username.substring(0, 2) : "US"}
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-white font-extrabold">{user?.username}</span>
+                <span className="text-[9px] text-[#c3c6d7]/50 font-medium capitalize">
+                  {user?.tenant_type === 'enterprise' ? `${user.enterprise_name} • ` : ''}{user?.role}
+                </span>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#131b2e] border border-white/5 select-none">
               <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse" />
               <span>sqlite: <code className="text-secondary font-mono">chinook.db</code></span>
             </div>
+
+            <button
+              onClick={handleLogout}
+              className="bg-white/5 hover:bg-white/10 text-[#c3c6d7] hover:text-white border border-white/10 hover:border-white/20 transition-all cursor-pointer rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-sm">logout</span>
+              Logout
+            </button>
           </div>
         </header>
 
@@ -1428,32 +1815,100 @@ export default function Workspace({ setView }) {
               {/* Right Side: Alarm logs terminal & Slack Webhook sandbox (Col span 5) */}
               <div className="lg:col-span-5 flex flex-col gap-6 h-full overflow-hidden">
                 
-                {/* Alarm logs box */}
+                {/* Log container with tabs */}
                 <div className="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden border border-white/5 bg-[#0b1326]/20">
-                  <div className="px-5 py-3 border-b border-white/5 bg-white/[0.01] shrink-0">
-                    <h3 className="text-xs uppercase tracking-wider font-semibold text-red-400 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-base animate-pulse">crisis_alert</span>
-                      Triggered Alarms logs
-                    </h3>
+                  <div className="px-5 py-3 border-b border-white/5 bg-white/[0.01] flex items-center justify-between shrink-0">
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => setLogViewTab("alarms")}
+                        className={`text-xs uppercase tracking-wider font-semibold border-none bg-transparent cursor-pointer flex items-center gap-2 pb-1 ${
+                          logViewTab === "alarms" 
+                            ? "text-red-400 border-b-2 border-red-400" 
+                            : "text-white/40 hover:text-white/60"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">crisis_alert</span>
+                        Alarms ({alertLogs.length})
+                      </button>
+                      <button 
+                        onClick={() => setLogViewTab("audit")}
+                        className={`text-xs uppercase tracking-wider font-semibold border-none bg-transparent cursor-pointer flex items-center gap-2 pb-1 ${
+                          logViewTab === "audit" 
+                            ? "text-primary border-b-2 border-primary" 
+                            : "text-white/40 hover:text-white/60"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">policy</span>
+                        Security Audit ({auditLogs.length})
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex-grow p-5 overflow-y-auto space-y-3 custom-scrollbar text-[11px] font-mono text-[#c3c6d7] bg-[#020617]/50 h-full">
-                    {alertLogs.length === 0 ? (
-                      <div className="text-[#c3c6d7]/30 italic py-12 text-center">
-                        Zero alarms logged. Watching database anomaly parameters...
-                      </div>
-                    ) : (
-                      alertLogs.map(log => (
-                        <div key={log.id} className="p-3 border border-red-500/20 bg-red-950/20 rounded-lg space-y-1">
-                          <div className="flex justify-between items-center text-red-300 font-extrabold">
-                            <span>🚨 {log.name}</span>
-                            <span className="text-[9px] text-white/40">{log.timestamp}</span>
-                          </div>
-                          <p className="text-[10px] leading-relaxed text-[#c3c6d7]">
-                            {log.message} Value detected: <span className="text-white font-bold">{log.value}</span>
-                          </p>
+                    {logViewTab === "alarms" ? (
+                      alertLogs.length === 0 ? (
+                        <div className="text-[#c3c6d7]/30 italic py-12 text-center">
+                          Zero alarms logged. Watching database anomaly parameters...
                         </div>
-                      ))
+                      ) : (
+                        alertLogs.map(log => (
+                          <div key={log.id} className="p-3 border border-red-500/20 bg-red-950/20 rounded-lg space-y-1">
+                            <div className="flex justify-between items-center text-red-300 font-extrabold">
+                              <span>🚨 {log.name}</span>
+                              <span className="text-[9px] text-white/40">{log.timestamp}</span>
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-[#c3c6d7]">
+                              {log.message} Value detected: <span className="text-white font-bold">{log.value}</span>
+                            </p>
+                          </div>
+                        ))
+                      )
+                    ) : (
+                      auditLogs.length === 0 ? (
+                        <div className="text-[#c3c6d7]/30 italic py-12 text-center">
+                          No audit logs captured yet. Execute chat queries to populate.
+                        </div>
+                      ) : (
+                        auditLogs.map(log => {
+                          const isBlocked = log.ast_status === "BLOCKED";
+                          const isFailed = log.ast_status === "FAILED";
+                          return (
+                            <div key={log.id} className={`p-3 border rounded-lg space-y-1.5 text-left ${
+                              isBlocked ? 'border-amber-500/20 bg-amber-950/20' :
+                              isFailed ? 'border-red-500/20 bg-red-950/20' :
+                              'border-[#2563eb]/20 bg-[#2563eb]/5'
+                            }`}>
+                              <div className="flex justify-between items-center font-extrabold">
+                                <span className={
+                                  isBlocked ? 'text-amber-400' :
+                                  isFailed ? 'text-red-400' :
+                                  'text-primary'
+                                }>
+                                  {isBlocked ? '🛡️ AST BLOCKED' : isFailed ? '⚠️ EXECUTION FAILED' : '✅ QUERY PASSED'}
+                                </span>
+                                <span className="text-[9px] text-white/40">{log.timestamp}</span>
+                              </div>
+                              <p className="text-[10px] text-white leading-relaxed">
+                                <span className="text-[#c3c6d7]/50">Query:</span> "{log.user_query}"
+                              </p>
+                              {log.generated_sql && (
+                                <div className="text-[9px] bg-[#020617] p-2 rounded border border-white/5 overflow-x-auto whitespace-pre font-mono text-[#a5f3fc]">
+                                  {log.generated_sql}
+                                </div>
+                              )}
+                              {log.error_message && (
+                                <div className="text-[9px] text-red-300 italic">
+                                  Err: {log.error_message}
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center text-[9px] text-white/30 pt-1 border-t border-white/5">
+                                <span>Role: <span className="text-white/60">{log.user_role}</span></span>
+                                <span>Latency: <span className="text-white/60">{log.latency_ms}ms</span></span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )
                     )}
                   </div>
                 </div>
@@ -1505,6 +1960,139 @@ export default function Workspace({ setView }) {
                   </div>
                 </div>
 
+              </div>
+
+            </div>
+          )}
+
+          {/* VIEW F: Users Dashboard Tab */}
+          {workspaceTab === 'users' && user?.role === 'admin' && user?.tenant_type === 'enterprise' && (
+            <div className="h-full w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden select-text text-left">
+              
+              {/* Left Column: Create user form (Col span 5) */}
+              <div className="glass-card rounded-2xl lg:col-span-5 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">person_add</span>
+                    Add Enterprise User
+                  </h3>
+                </div>
+
+                <div className="flex-grow p-6 overflow-y-auto space-y-6 custom-scrollbar h-full bg-[#020617]/25">
+                  <div className="p-5 border border-white/5 bg-[#0b1326]/40 rounded-2xl space-y-4">
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-white">New User Account Details</h4>
+                    
+                    <div>
+                      <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={newStaffUsername}
+                        onChange={e => setNewStaffUsername(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2 text-white outline-none focus:border-primary/50"
+                        placeholder="e.g. alice_smith"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Temporary Password</label>
+                      <input
+                        type="password"
+                        value={newStaffPassword}
+                        onChange={e => setNewStaffPassword(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2 text-white outline-none focus:border-primary/50"
+                        placeholder="e.g. tempPass123"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Clearance Role</label>
+                      <select
+                        value={newStaffRole}
+                        onChange={e => setNewStaffRole(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2.5 text-white outline-none focus:border-primary/50"
+                      >
+                        <option value="general">General (Full Masking/Redaction)</option>
+                        <option value="analyst">Analyst (Partial Column Masking)</option>
+                        <option value="admin">Admin (Unrestricted Database View)</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={handleCreateEnterpriseUser}
+                      disabled={isRegisteringStaff}
+                      className="bg-gradient-to-r from-primary to-secondary text-[#020617] font-bold px-5 py-2.5 rounded-xl text-xs hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer border-none w-full"
+                    >
+                      {isRegisteringStaff ? 'Registering...' : 'Add User Account'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: User list & management grid (Col span 7) */}
+              <div className="glass-card rounded-2xl lg:col-span-7 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">manage_accounts</span>
+                    Enterprise Members ({enterpriseUsers.length})
+                  </h3>
+                </div>
+
+                <div className="flex-grow p-6 overflow-y-auto space-y-4 custom-scrollbar h-full bg-[#020617]/50">
+                  {enterpriseUsers.length === 0 ? (
+                    <div className="text-xs text-[#c3c6d7]/30 italic py-12 text-center">Loading team members...</div>
+                  ) : (
+                    enterpriseUsers.map(member => {
+                      const isSelf = member.id === user?.id;
+                      return (
+                        <div key={member.id} className="p-4 border border-white/5 bg-[#0b1326]/30 rounded-xl flex items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-extrabold text-white">{member.username}</span>
+                              {isSelf && (
+                                <span className="bg-white/10 text-white/50 text-[8px] px-1.5 py-0.5 rounded font-mono uppercase font-bold">
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-[#c3c6d7]/40 font-mono">
+                              Created: {member.created_at}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            {/* Role Select dropdown */}
+                            <div>
+                              <select
+                                value={member.role}
+                                disabled={isSelf}
+                                onChange={e => handleUpdateEnterpriseUserRole(member.id, e.target.value)}
+                                className={`bg-[#020617] border border-white/5 rounded text-[10px] font-bold uppercase py-1 px-2 text-white outline-none cursor-pointer disabled:opacity-50 ${
+                                  member.role === 'admin' ? 'text-secondary border-secondary/20 bg-secondary/5' :
+                                  member.role === 'analyst' ? 'text-tertiary border-tertiary/20 bg-tertiary/5' :
+                                  'text-primary border-primary/20 bg-primary/5'
+                                }`}
+                              >
+                                <option value="general">GENERAL</option>
+                                <option value="analyst">ANALYST</option>
+                                <option value="admin">ADMIN</option>
+                              </select>
+                            </div>
+
+                            {/* Delete button */}
+                            <button
+                              onClick={() => handleDeleteEnterpriseUser(member.id)}
+                              disabled={isSelf}
+                              className="text-red-400/70 hover:text-red-400 disabled:opacity-30 bg-transparent border-none cursor-pointer flex items-center p-1 transition-colors"
+                              title="Delete Member"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
             </div>
