@@ -131,23 +131,38 @@ class AuthDatabaseManager:
         rows = await self.db_manager.execute_query(query, {"id": user_id})
         return rows[0] if rows else None
 
-    async def get_enterprise_users(self, enterprise_id: int) -> List[Dict[str, Any]]:
-        """Returns all registered users belonging to an enterprise organization."""
-        query = "SELECT id, username, role, tenant_type, created_at FROM users WHERE enterprise_id = :enterprise_id ORDER BY id ASC;"
-        return await self.db_manager.execute_query(query, {"enterprise_id": enterprise_id})
+    async def get_enterprise_users(self, enterprise_id: Optional[int]) -> List[Dict[str, Any]]:
+        """Returns all registered users belonging to an enterprise organization or single users if enterprise_id is None."""
+        if enterprise_id is not None:
+            query = "SELECT id, username, role, tenant_type, created_at FROM users WHERE enterprise_id = :enterprise_id ORDER BY id ASC;"
+            params = {"enterprise_id": enterprise_id}
+        else:
+            query = "SELECT id, username, role, tenant_type, created_at FROM users WHERE enterprise_id IS NULL ORDER BY id ASC;"
+            params = {}
+        return await self.db_manager.execute_query(query, params)
 
-    async def delete_enterprise_user(self, user_id: int, enterprise_id: int) -> bool:
-        """Deletes a user account belonging to a specific enterprise."""
-        delete_query = "DELETE FROM users WHERE id = :id AND enterprise_id = :enterprise_id;"
+    async def delete_enterprise_user(self, user_id: int, enterprise_id: Optional[int]) -> bool:
+        """Deletes a user account belonging to a specific enterprise or single tenant."""
+        if enterprise_id is not None:
+            delete_query = "DELETE FROM users WHERE id = :id AND enterprise_id = :enterprise_id;"
+            params = {"id": user_id, "enterprise_id": enterprise_id}
+        else:
+            delete_query = "DELETE FROM users WHERE id = :id AND enterprise_id IS NULL;"
+            params = {"id": user_id}
         async with self.db_manager.engine.begin() as conn:
-            result = await conn.execute(text(delete_query), {"id": user_id, "enterprise_id": enterprise_id})
+            result = await conn.execute(text(delete_query), params)
             return result.rowcount > 0
 
-    async def update_user_role(self, user_id: int, role: str, enterprise_id: int) -> bool:
-        """Updates the permission role of a user belonging to an enterprise."""
-        update_query = "UPDATE users SET role = :role WHERE id = :id AND enterprise_id = :enterprise_id;"
+    async def update_user_role(self, user_id: int, role: str, enterprise_id: Optional[int]) -> bool:
+        """Updates the permission role of a user belonging to an enterprise or single tenant."""
+        if enterprise_id is not None:
+            update_query = "UPDATE users SET role = :role WHERE id = :id AND enterprise_id = :enterprise_id;"
+            params = {"role": role, "id": user_id, "enterprise_id": enterprise_id}
+        else:
+            update_query = "UPDATE users SET role = :role WHERE id = :id AND enterprise_id IS NULL;"
+            params = {"role": role, "id": user_id}
         async with self.db_manager.engine.begin() as conn:
-            result = await conn.execute(text(update_query), {"role": role, "id": user_id, "enterprise_id": enterprise_id})
+            result = await conn.execute(text(update_query), params)
             return result.rowcount > 0
 
     async def count_users(self) -> int:

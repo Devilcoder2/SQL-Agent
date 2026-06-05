@@ -79,7 +79,7 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
             <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Alerts</span>
           </button>
 
-          {user?.role === 'admin' && user?.tenant_type === 'enterprise' && (
+          {user?.role === 'admin' && (
             <button
               onClick={() => setWorkspaceTab('users')}
               className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${

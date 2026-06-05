@@ -169,7 +169,7 @@ export default function Workspace({ setView }) {
           )}
 
           {/* VIEW F: Users Dashboard Tab */}
-          {workspaceTab === 'users' && user?.role === 'admin' && user?.tenant_type === 'enterprise' && (
+          {workspaceTab === 'users' && user?.role === 'admin' && (
             <UsersTab fetch={fetchWrapper} user={user} />
           )}
 

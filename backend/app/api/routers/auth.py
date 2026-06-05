@@ -86,16 +86,11 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 @router.get("/enterprise/users")
 async def get_enterprise_users(current_user: dict = Depends(get_current_user)):
-    if current_user["tenant_type"] != "enterprise":
-        raise HTTPException(status_code=400, detail="Not an enterprise account.")
     users = await auth_db.get_enterprise_users(current_user["enterprise_id"])
     return {"users": users}
 
 @router.post("/enterprise/users")
 async def add_enterprise_user(req: CreateEnterpriseUserRequest, current_user: dict = Depends(require_admin)):
-    if current_user["tenant_type"] != "enterprise":
-        raise HTTPException(status_code=400, detail="Not an enterprise account.")
-    
     existing = await auth_db.get_user_by_username(req.username)
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists.")
@@ -105,16 +100,13 @@ async def add_enterprise_user(req: CreateEnterpriseUserRequest, current_user: di
         username=req.username,
         password_hash=hashed,
         role=req.role,
-        tenant_type="enterprise",
+        tenant_type=current_user["tenant_type"],
         enterprise_id=current_user["enterprise_id"]
     )
     return {"status": "success", "message": f"User '{req.username}' created.", "user_id": new_user_id}
 
 @router.delete("/enterprise/users/{user_id}")
 async def delete_enterprise_user(user_id: int, current_user: dict = Depends(require_admin)):
-    if current_user["tenant_type"] != "enterprise":
-        raise HTTPException(status_code=400, detail="Not an enterprise account.")
-    
     if user_id == current_user["id"]:
         raise HTTPException(status_code=400, detail="Cannot delete your own administrative account.")
     
@@ -126,9 +118,6 @@ async def delete_enterprise_user(user_id: int, current_user: dict = Depends(requ
 
 @router.put("/enterprise/users/{user_id}/role")
 async def update_enterprise_user_role(user_id: int, req: UpdateUserRoleRequest, current_user: dict = Depends(require_admin)):
-    if current_user["tenant_type"] != "enterprise":
-        raise HTTPException(status_code=400, detail="Not an enterprise account.")
-    
     if user_id == current_user["id"]:
         raise HTTPException(status_code=400, detail="Cannot change your own administrative role.")
     

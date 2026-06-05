@@ -12,7 +12,6 @@ export default function UsersTab({ fetch, user }) {
   }, []);
 
   const fetchEnterpriseUsers = async () => {
-    if (user?.tenant_type !== 'enterprise') return;
     try {
       const res = await fetch("/api/v1/enterprise/users");
       if (res.ok) {
@@ -20,7 +19,7 @@ export default function UsersTab({ fetch, user }) {
         setEnterpriseUsers(data.users || []);
       }
     } catch (err) {
-      console.error("Error loading enterprise users:", err);
+      console.error("Error loading users:", err);
     }
   };
 
@@ -104,7 +103,7 @@ export default function UsersTab({ fetch, user }) {
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
           <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
             <span className="material-symbols-outlined text-base">person_add</span>
-            Add Enterprise User
+            Add {user?.tenant_type === 'enterprise' ? 'Enterprise' : 'Workspace'} User
           </h3>
         </div>
 
@@ -163,7 +162,7 @@ export default function UsersTab({ fetch, user }) {
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
           <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
             <span className="material-symbols-outlined text-base">manage_accounts</span>
-            Enterprise Members ({enterpriseUsers.length})
+            {user?.tenant_type === 'enterprise' ? 'Enterprise' : 'Workspace'} Members ({enterpriseUsers.length})
           </h3>
         </div>
 
