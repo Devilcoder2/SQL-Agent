@@ -168,7 +168,8 @@ async def synthesize_narrative(state: AgentState) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_messages([
             ("system", (
                 "You are an expert Business Analyst. Generate a concise, boardroom-ready executive summary (TL;DR) explaining the results.\n"
-                "Focus on the business context, trend details, and key numbers. Use bullet points.\n\n"
+                "Format your response using clean Markdown syntax (bold text, bullet lists, headers, etc.). Do not use raw HTML.\n"
+                "Focus on the business context, trend details, and key numbers.\n\n"
                 "SQL Query Used: {sql}\n"
                 "Raw Database Results:\n{results}"
             )),

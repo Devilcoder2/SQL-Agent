@@ -1,5 +1,71 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+const renderMarkdown = (text) => {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const renderedElements = [];
+  let currentList = [];
+
+  const flushList = (key) => {
+    if (currentList.length > 0) {
+      renderedElements.push(
+        <ul key={key} className="list-disc pl-5 mb-3 space-y-1.5">
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  const parseInlineStyles = (lineText) => {
+    const parts = lineText.split(/\*\*([^*]+)\*\*/g);
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <strong key={index} className="text-white font-extrabold">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList(`list-${idx}`);
+      return;
+    }
+
+    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      flushList(`list-${idx}`);
+      const level = headerMatch[1].length;
+      const headerText = headerMatch[2];
+      const parsedText = parseInlineStyles(headerText);
+      const classes = level === 1 ? "text-lg font-bold text-white mb-2" :
+                      level === 2 ? "text-base font-bold text-white mb-2" :
+                      "text-sm font-bold text-white mb-1.5";
+      const Tag = `h${level}`;
+      renderedElements.push(React.createElement(Tag, { key: idx, className: classes }, parsedText));
+      return;
+    }
+
+    const listMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+    if (listMatch) {
+      const itemText = listMatch[1];
+      const parsedText = parseInlineStyles(itemText);
+      currentList.push(<li key={`li-${idx}`} className="text-[#c3c6d7] text-xs sm:text-sm leading-relaxed">{parsedText}</li>);
+      return;
+    }
+
+    flushList(`list-${idx}`);
+    const parsedText = parseInlineStyles(trimmed);
+    renderedElements.push(<p key={idx} className="mb-2.5 text-[#c3c6d7] text-xs sm:text-sm leading-relaxed">{parsedText}</p>);
+  });
+
+  flushList(`list-final`);
+  return <div className="space-y-1 text-left">{renderedElements}</div>;
+};
+
 export default function ConsoleTab({
   fetch,
   initialQuery,
@@ -323,8 +389,8 @@ export default function ConsoleTab({
                 Run a successful query to view the narrative report.
               </div>
             ) : (
-              <div className="whitespace-pre-wrap font-sans text-white leading-relaxed">
-                {narrativeResponse}
+              <div className="font-sans leading-relaxed">
+                {renderMarkdown(narrativeResponse)}
               </div>
             )}
           </div>
