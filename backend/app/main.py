@@ -1,6 +1,8 @@
 import os
+import asyncio
+from datetime import datetime
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Form
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
@@ -400,12 +402,195 @@ async def export_pdf(req: PDFExportRequest):
         headers={"Content-Disposition": "attachment; filename=analytics_report.pdf"}
     )
 
+# --- Alerts Registry & Smoke Detector Background Scheduler ---
+
+ALERTS_REGISTRY = [
+    {
+        "id": "alert_1",
+        "name": "High Invoice Volumes",
+        "query": "SELECT COUNT(*) FROM Invoice;",
+        "condition": "> 400",
+        "interval_seconds": 15,
+        "last_checked": None,
+        "status": "Active"
+    },
+    {
+        "id": "alert_2",
+        "name": "High Support Ticket Count",
+        "query": "SELECT COUNT(*) FROM Customer WHERE Country = 'Brazil';",
+        "condition": "> 4",
+        "interval_seconds": 30,
+        "last_checked": None,
+        "status": "Active"
+    }
+]
+
+ALERTS_LOGS = []
+
+class CreateAlertRequest(BaseModel):
+    name: str
+    query: str
+    condition: str
+    interval_seconds: int
+
+async def alert_scheduler_loop():
+    # Wait for database manager to be ready
+    await asyncio.sleep(3)
+    while True:
+        now = datetime.now()
+        for alert in ALERTS_REGISTRY:
+            if alert["status"] == "Active":
+                try:
+                    # Run background SQL check query
+                    results = await db_manager.execute_query(alert["query"])
+                    alert["last_checked"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    if results:
+                        first_row = results[0]
+                        first_val = list(first_row.values())[0]
+                        
+                        # Evaluate condition: e.g. "> 100", "< 5", "= 10"
+                        cond = alert["condition"].strip()
+                        triggered = False
+                        try:
+                            val_num = float(first_val)
+                            if cond.startswith(">"):
+                                threshold = float(cond.replace(">", "").strip())
+                                triggered = val_num > threshold
+                            elif cond.startswith("<"):
+                                threshold = float(cond.replace("<", "").strip())
+                                triggered = val_num < threshold
+                            elif cond.startswith("="):
+                                threshold = float(cond.replace("=", "").strip())
+                                triggered = val_num == threshold
+                        except (ValueError, TypeError):
+                            # Fallback to string comparison if not numeric
+                            if cond.startswith("="):
+                                threshold = cond.replace("=", "").strip()
+                                triggered = str(first_val) == threshold
+                        
+                        if triggered:
+                            alert["status"] = "Triggered"
+                            ALERTS_LOGS.append({
+                                "id": f"log_{len(ALERTS_LOGS) + 1}",
+                                "alert_id": alert["id"],
+                                "name": alert["name"],
+                                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+                                "value": str(first_val),
+                                "message": f"Check value {first_val} triggered condition '{cond}'."
+                            })
+                except Exception as e:
+                    alert["status"] = "Error"
+                    print(f"Error checking alert '{alert['name']}': {e}")
+                    
+        await asyncio.sleep(5)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(alert_scheduler_loop())
+
+
+# --- Alerts Endpoints ---
+
+@app.get("/api/v1/alerts")
+async def get_alerts():
+    return {"alerts": ALERTS_REGISTRY}
+
+@app.post("/api/v1/alerts")
+async def create_alert(req: CreateAlertRequest):
+    new_alert = {
+        "id": f"alert_{len(ALERTS_REGISTRY) + 1}",
+        "name": req.name,
+        "query": req.query,
+        "condition": req.condition,
+        "interval_seconds": req.interval_seconds,
+        "last_checked": None,
+        "status": "Active"
+    }
+    ALERTS_REGISTRY.append(new_alert)
+    return {"status": "success", "alert": new_alert}
+
+@app.get("/api/v1/alerts/logs")
+async def get_alerts_logs():
+    return {"logs": ALERTS_LOGS}
+
+@app.post("/api/v1/alerts/{alert_id}/reset")
+async def reset_alert(alert_id: str):
+    for alert in ALERTS_REGISTRY:
+        if alert["id"] == alert_id:
+            alert["status"] = "Active"
+            return {"status": "success", "message": f"Alert '{alert['name']}' reset to Active."}
+    raise HTTPException(status_code=404, detail="Alert rule not found.")
+
+
+# --- Slack Webhook slash command receiver ---
+
+@app.post("/api/v1/webhooks/slack")
+async def slack_webhook(text: str = Form(...)):
+    inputs = {
+        "user_query": text,
+        "user_role": "general",
+        "relevant_tables": [],
+        "table_schemas": "",
+        "glossary_terms": [],
+        "generated_sql": None,
+        "query_results": None,
+        "execution_error": None,
+        "retry_count": 0,
+        "narrative_response": None
+    }
+    try:
+        final_state = await agent_executor.ainvoke(inputs)
+        sql = final_state.get("generated_sql") or "-- No SQL statements executed."
+        narrative = final_state.get("narrative_response") or "No insights compiled."
+        
+        # Slack Block Kit payload structure
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "📊 AI SQL Agent Intelligence Briefing",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Query Request:* \"{text}\""
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Insight Summary:*\n{narrative}"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Compiled SQL:* `{sql}`"
+                    }
+                ]
+            }
+        ]
+        return {"response_type": "in_channel", "blocks": blocks}
+    except Exception as e:
+        return {
+            "response_type": "ephemeral",
+            "text": f"⚠️ Agent execution failed: {str(e)}"
+        }
 
 
 # Mount static frontend files to root path
 frontend_dir = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../frontend/dist")
 )
+
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="static")
 
