@@ -14,6 +14,7 @@ from app.api.routers.query import router as query_router
 from app.api.routers.exports import router as exports_router
 from app.api.routers.alerts import router as alerts_router, alert_scheduler_loop
 from app.api.routers.audit import router as audit_router
+from app.api.routers.databases import router as databases_router
 
 app = FastAPI(
     title="Enterprise AI SQL Agent API",
@@ -36,12 +37,25 @@ app.include_router(query_router)
 app.include_router(exports_router)
 app.include_router(alerts_router)
 app.include_router(audit_router)
+app.include_router(databases_router)
 
 @app.on_event("startup")
 async def startup_event():
     await auth_db.initialize()
     await audit_manager.initialize()
     asyncio.create_task(alert_scheduler_loop())
+    
+    # Auto-index default database if not already indexed
+    try:
+        from app.core.vector_store import VectorStoreManager
+        from app.api.routers.databases import index_database
+        vector_store = VectorStoreManager()
+        existing = vector_store.table_collection.get(where={"database_id": "default"}, limit=1)
+        if not existing or not existing.get("ids"):
+            print("Auto-indexing default database schemas on startup...")
+            await index_database("default", os.getenv("DATABASE_URL"))
+    except Exception as e:
+        print(f"Warning: Failed to auto-index default database on startup: {e}")
     
     # Check LangSmith Tracing Status
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"

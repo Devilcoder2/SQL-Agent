@@ -38,9 +38,20 @@ class AuthDatabaseManager:
             FOREIGN KEY (enterprise_id) REFERENCES enterprises(id) ON DELETE CASCADE
         );
         """
+        create_databases = """
+        CREATE TABLE IF NOT EXISTS databases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alias TEXT,
+            connection_url TEXT,
+            enterprise_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (enterprise_id) REFERENCES enterprises(id) ON DELETE CASCADE
+        );
+        """
         async with self.db_manager.engine.begin() as conn:
             await conn.execute(text(create_enterprises))
             await conn.execute(text(create_users))
+            await conn.execute(text(create_databases))
 
     async def create_enterprise(self, name: str) -> int:
         """Registers a new corporate enterprise and returns its ID."""
@@ -144,6 +155,56 @@ class AuthDatabaseManager:
         query = "SELECT COUNT(*) as cnt FROM users;"
         res = await self.db_manager.execute_query(query)
         return res[0]["cnt"] if res else 0
+
+    async def create_database(self, alias: str, connection_url: str, enterprise_id: Optional[int] = None) -> int:
+        """Registers a new database connection configuration and returns its ID."""
+        insert_query = """
+        INSERT INTO databases (alias, connection_url, enterprise_id)
+        VALUES (:alias, :connection_url, :enterprise_id)
+        RETURNING id;
+        """
+        params = {
+            "alias": alias.strip(),
+            "connection_url": connection_url.strip(),
+            "enterprise_id": enterprise_id
+        }
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(insert_query), params)
+            row = result.fetchone()
+            if row:
+                return row[0]
+            # Fallback
+            select_query = "SELECT id FROM databases WHERE alias = :alias AND connection_url = :connection_url;"
+            res = await self.db_manager.execute_query(select_query, {"alias": alias.strip(), "connection_url": connection_url.strip()})
+            return res[0]["id"]
+
+    async def get_database(self, db_id: int) -> Optional[Dict[str, Any]]:
+        """Retrieves details of a specific database configuration."""
+        query = "SELECT id, alias, connection_url, enterprise_id, created_at FROM databases WHERE id = :id;"
+        rows = await self.db_manager.execute_query(query, {"id": db_id})
+        return rows[0] if rows else None
+
+    async def get_databases(self, enterprise_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Retrieves all connected databases for a user or enterprise."""
+        if enterprise_id is not None:
+            query = "SELECT id, alias, connection_url, enterprise_id, created_at FROM databases WHERE enterprise_id = :enterprise_id ORDER BY id ASC;"
+            params = {"enterprise_id": enterprise_id}
+        else:
+            query = "SELECT id, alias, connection_url, enterprise_id, created_at FROM databases WHERE enterprise_id IS NULL ORDER BY id ASC;"
+            params = {}
+        return await self.db_manager.execute_query(query, params)
+
+    async def delete_database(self, db_id: int, enterprise_id: Optional[int] = None) -> bool:
+        """Disconnects a database from the enterprise/user profile."""
+        if enterprise_id is not None:
+            query = "DELETE FROM databases WHERE id = :id AND enterprise_id = :enterprise_id;"
+            params = {"id": db_id, "enterprise_id": enterprise_id}
+        else:
+            query = "DELETE FROM databases WHERE id = :id AND enterprise_id IS NULL;"
+            params = {"id": db_id}
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(query), params)
+            return result.rowcount > 0
 
     async def close(self):
         await self.db_manager.close()

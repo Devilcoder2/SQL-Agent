@@ -5,7 +5,7 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 # pyrefly: ignore [missing-import]
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 # pyrefly: ignore [missing-import]
 from fastapi.security import OAuth2PasswordBearer
 from app.core.auth_db import AuthDatabaseManager
@@ -102,3 +102,56 @@ async def require_admin(current_user: Dict[str, Any] = Depends(get_current_user)
             detail="Administrative privileges required."
         )
     return current_user
+
+async def get_active_db(
+    x_database_id: Optional[str] = Header(None, alias="x-database-id"),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    FastAPI dependency resolving the target database connection details.
+    Reads 'x-database-id' from headers, checks permission access, and returns details.
+    """
+    import os
+    db_id = x_database_id or "default"
+    
+    if db_id == "default":
+        return {
+            "id": "default",
+            "alias": "Default (Chinook)",
+            "url": os.getenv("DATABASE_URL")
+        }
+        
+    try:
+        db_id_num = int(db_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid database ID format."
+        )
+        
+    db_record = await auth_db.get_database(db_id_num)
+    if not db_record:
+        raise HTTPException(
+            status_code=404,
+            detail="Connected database not found."
+        )
+        
+    # Check tenant isolation
+    if current_user["tenant_type"] == "enterprise":
+        if db_record["enterprise_id"] != current_user["enterprise_id"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Database access denied."
+            )
+    else: # single mode
+        if db_record["enterprise_id"] is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Database access denied."
+            )
+            
+    return {
+        "id": str(db_record["id"]),
+        "alias": db_record["alias"],
+        "url": db_record["connection_url"]
+    }

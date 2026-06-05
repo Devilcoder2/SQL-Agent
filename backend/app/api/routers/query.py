@@ -3,18 +3,25 @@ from typing import List, Dict, Any, Optional, Set
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Form
 from app.agents.sql_agent import agent_executor, db_manager, vector_store
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, get_active_db
+from app.core.database import get_db_manager
 from app.core.audit import audit_manager
 from app.api.schemas import QueryRequest, QueryResponse, GlossaryTermRequest
 
 router = APIRouter(tags=["Query & Metadata"])
 
 @router.post("/api/v1/query", response_model=QueryResponse)
-async def run_query(request: QueryRequest, current_user: dict = Depends(get_current_user)):
+async def run_query(
+    request: QueryRequest,
+    current_user: dict = Depends(get_current_user),
+    active_db: dict = Depends(get_active_db)
+):
     start_time = time.time()
     inputs = {
         "user_query": request.query,
         "user_role": current_user["role"],
+        "database_id": active_db["id"],
+        "database_url": active_db["url"],
         "relevant_tables": [],
         "table_schemas": "",
         "glossary_terms": [],
@@ -73,22 +80,24 @@ async def run_query(request: QueryRequest, current_user: dict = Depends(get_curr
         raise HTTPException(status_code=500, detail=f"Agent execution error: {str(e)}")
 
 @router.get("/api/v1/tables")
-async def get_tables():
+async def get_tables(active_db: dict = Depends(get_active_db)):
     try:
-        tables = await db_manager.get_table_names()
+        db = get_db_manager(active_db["url"])
+        tables = await db.get_table_names()
         return {"tables": tables}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch table list: {str(e)}")
 
 @router.get("/api/v1/tables/{table_name}/schema")
-async def get_table_schema(table_name: str):
+async def get_table_schema(table_name: str, active_db: dict = Depends(get_active_db)):
     try:
-        tables = await db_manager.get_table_names()
+        db = get_db_manager(active_db["url"])
+        tables = await db.get_table_names()
         if table_name not in tables:
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found.")
         
-        columns = await db_manager.get_table_schema(table_name)
-        fkeys = await db_manager.get_foreign_keys(table_name)
+        columns = await db.get_table_schema(table_name)
+        fkeys = await db.get_foreign_keys(table_name)
         return {
             "table": table_name,
             "columns": columns,

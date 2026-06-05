@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 # pyrefly: ignore [missing-import]
 from langgraph.graph import StateGraph, END
 
-from app.core.database import DatabaseManager
+from app.core.database import DatabaseManager, get_db_manager
 from app.core.vector_store import VectorStoreManager
 from app.agents.state import AgentState
 from app.core.security import verify_sql_safe
@@ -48,14 +48,17 @@ async def retrieve_context(state: AgentState) -> Dict[str, Any]:
     print("Agent Step: Retrieving semantic context...")
 
     query = state["user_query"]
+    db_id = state.get("database_id") or "default"
+    db_url = state.get("database_url")
 
-    tables = vector_store.search_relevant_tables(query, limit=3)
+    tables = vector_store.search_relevant_tables(query, database_id=db_id, limit=3)
 
+    db = get_db_manager(db_url)
     schemas = []
     for table in tables: 
-        columns = await db_manager.get_table_schema(table)
+        columns = await db.get_table_schema(table)
         col_desc = ", ".join([f"{c['name']} ({c['type']})" for c in columns])
-        fkeys = await db_manager.get_foreign_keys(table)
+        fkeys = await db.get_foreign_keys(table)
         fk_desc = ""
         if fkeys:
             fk_parts = [f"{fk['constrained_columns']} references {fk['referred_table']}.{fk['referred_columns']}" for fk in fkeys]
@@ -119,7 +122,9 @@ async def execute_sql(state: AgentState) -> Dict[str, Any]:
 
     #Step - 02: Database query execution
     try: 
-        results = await db_manager.execute_query(sql)
+        db_url = state.get("database_url")
+        db = get_db_manager(db_url)
+        results = await db.execute_query(sql)
         print("SQL executed successfully!")
 
         #Step - 03: Dynamic PII masking filter 

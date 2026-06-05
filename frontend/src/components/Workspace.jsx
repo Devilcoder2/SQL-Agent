@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './workspace/Sidebar';
 import Header from './workspace/Header';
 import AuthPanel from './workspace/AuthPanel';
@@ -37,14 +37,38 @@ export default function Workspace({ setView }) {
   const [generatedSql, setGeneratedSql] = useState("");
   const [narrativeResponse, setNarrativeResponse] = useState("");
 
+  // --- Multi-Database Management State ---
+  const [activeDatabaseId, setActiveDatabaseId] = useState(() => localStorage.getItem("activeDatabaseId") || "default");
+  const [databases, setDatabases] = useState([]);
+
   // Global authenticated fetch wrapper
   const fetchWrapper = async (url, options = {}) => {
     const headers = options.headers || {};
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
+    if (activeDatabaseId) {
+      headers["x-database-id"] = activeDatabaseId;
+    }
     return window.fetch(url, { ...options, headers });
   };
+
+  const fetchDatabases = async () => {
+    if (!token) return;
+    try {
+      const res = await fetchWrapper("/api/v1/databases");
+      if (res.ok) {
+        const data = await res.json();
+        setDatabases(data.databases || []);
+      }
+    } catch (err) {
+      console.error("Error loading databases:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDatabases();
+  }, [token, activeDatabaseId]);
 
   const handleAuthSuccess = (newToken, newUser) => {
     localStorage.setItem("token", newToken);
@@ -93,7 +117,15 @@ export default function Workspace({ setView }) {
         <Header 
           workspaceTab={workspaceTab} 
           user={user} 
-          handleLogout={handleLogout} 
+          handleLogout={handleLogout}
+          activeDatabaseId={activeDatabaseId}
+          setActiveDatabaseId={(id) => {
+            localStorage.setItem("activeDatabaseId", id);
+            setActiveDatabaseId(id);
+          }}
+          databases={databases}
+          fetchDatabases={fetchDatabases}
+          fetch={fetchWrapper}
         />
 
         {/* Workspace Active Views Render Window */}
@@ -123,7 +155,7 @@ export default function Workspace({ setView }) {
 
           {/* VIEW C: Schema & Glossary View */}
           {workspaceTab === 'schema' && (
-            <SchemaTab fetch={fetchWrapper} />
+            <SchemaTab fetch={fetchWrapper} activeDatabaseId={activeDatabaseId} />
           )}
 
           {/* VIEW D: Collaborative War Room Tab */}
@@ -133,7 +165,7 @@ export default function Workspace({ setView }) {
 
           {/* VIEW E: Alerts Manager Tab */}
           {workspaceTab === 'alerts' && (
-            <AlertsTab fetch={fetchWrapper} token={token} />
+            <AlertsTab fetch={fetchWrapper} token={token} activeDatabaseId={activeDatabaseId} />
           )}
 
           {/* VIEW F: Users Dashboard Tab */}

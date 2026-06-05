@@ -90,3 +90,16 @@ class DatabaseManager:
     async def close(self):
         """Disposes the engine connection pool."""
         await self.engine.dispose()
+
+_POOL: Dict[str, DatabaseManager] = {}
+
+def get_db_manager(db_url: str = None) -> DatabaseManager:
+    """Retrieves or creates a DatabaseManager for a given database URL."""
+    global _POOL
+    import os
+    url = db_url or os.getenv("DATABASE_URL")
+    if not url:
+        raise ValueError("No database URL provided or found in environment variables.")
+    if url not in _POOL:
+        _POOL[url] = DatabaseManager(url)
+    return _POOL[url]

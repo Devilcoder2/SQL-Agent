@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function AlertsTab({ fetch, token }) {
+export default function AlertsTab({ fetch, token, activeDatabaseId }) {
   const [alerts, setAlerts] = useState([]);
   const [alertLogs, setAlertLogs] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
@@ -28,7 +28,7 @@ export default function AlertsTab({ fetch, token }) {
       fetchAuditLogs();
     }, 5000);
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, activeDatabaseId]);
 
   const fetchAlerts = async () => {
     try {

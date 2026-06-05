@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SchemaTab({ fetch }) {
+export default function SchemaTab({ fetch, activeDatabaseId }) {
   const [tables, setTables] = useState([]);
   const [tableSchemas, setTableSchemas] = useState({}); // { tableName: { columns: [], fkeys: [] } }
   const [expandedTables, setExpandedTables] = useState(new Set());
@@ -12,7 +12,9 @@ export default function SchemaTab({ fetch }) {
 
   useEffect(() => {
     fetchTables();
-  }, []);
+    setTableSchemas({});
+    setExpandedTables(new Set());
+  }, [activeDatabaseId]);
 
   const fetchTables = async () => {
     try {

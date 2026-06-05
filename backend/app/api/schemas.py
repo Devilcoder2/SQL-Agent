@@ -61,3 +61,7 @@ class CreateAlertRequest(BaseModel):
     query: str
     condition: str
     interval_seconds: int
+
+class AddDatabaseRequest(BaseModel):
+    alias: str
+    connection_url: str

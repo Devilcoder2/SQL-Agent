@@ -29,14 +29,14 @@ class VectorStoreManager:
             metadata={"hnsw:space": "cosine"}
         )
     
-    def upsert_tables(self, tables_data: List[Dict[str, Any]]):
+    def upsert_tables(self, tables_data: List[Dict[str, Any]], database_id: str = "default"):
         """
         Indexes table structures into ChromaDB.
         tables_data is a list of dicts: [{"name": "TableName", "description": "text summary"}]
         """ 
-        ids = [t["name"] for t in tables_data]
+        ids = [f"{database_id}_{t['name']}" for t in tables_data]
         documents = [t["description"] for t in tables_data]
-        metadatas = [{"table_name": t["name"]} for t in tables_data]
+        metadatas = [{"table_name": t["name"], "database_id": database_id} for t in tables_data]
 
         self.table_collection.upsert(
             ids=ids,
@@ -44,18 +44,25 @@ class VectorStoreManager:
             metadatas=metadatas
         )
     
-    def search_relevant_tables(self, query: str, limit: int = 5) -> List[str]:
+    def search_relevant_tables(self, query: str, database_id: str = "default", limit: int = 5) -> List[str]:
         """
         Queries ChromaDB for the table names most semantically relevant to the user query.
         """
         results = self.table_collection.query(
             query_texts=[query],
-            n_results=limit
+            n_results=limit,
+            where={"database_id": database_id}
         )
 
         if results and results["metadatas"] and results["metadatas"][0]:
             return [meta["table_name"] for meta in results["metadatas"][0]]
         return []
+
+    def delete_database_tables(self, database_id: str):
+        """
+        Deletes all indexed schemas associated with a database ID from ChromaDB.
+        """
+        self.table_collection.delete(where={"database_id": database_id})
 
     def upsert_glossary_term(self, term: str, definition: str, sql_hint: str):
         """
