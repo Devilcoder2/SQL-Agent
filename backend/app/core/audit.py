@@ -70,3 +70,6 @@ class AuditLogManager:
         LIMIT :limit;
         """
         return await self.db_manager.execute_query(select_query, {"limit": limit})
+
+audit_manager = AuditLogManager()
+
