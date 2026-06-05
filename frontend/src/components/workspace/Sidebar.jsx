@@ -40,33 +40,35 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
             <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Studio</span>
           </button>
 
-          <button
-            onClick={() => setWorkspaceTab('schema')}
-            className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
-              workspaceTab === 'schema'
-                ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
-                : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
-            }`}
-            title="Schema Explorer"
-          >
-            <span className="material-symbols-outlined text-[22px]">schema</span>
-            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Schema</span>
-          </button>
+          {user?.can_view_schema !== false && (
+            <button
+              onClick={() => setWorkspaceTab('schema')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'schema'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="Schema Explorer"
+            >
+              <span className="material-symbols-outlined text-[22px]">schema</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Schema</span>
+            </button>
+          )}
 
-
-
-          <button
-            onClick={() => setWorkspaceTab('alerts')}
-            className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
-              workspaceTab === 'alerts'
-                ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
-                : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
-            }`}
-            title="Alerts Manager"
-          >
-            <span className="material-symbols-outlined text-[22px]">notifications_active</span>
-            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Alerts</span>
-          </button>
+          {user?.can_view_alerts !== false && (
+            <button
+              onClick={() => setWorkspaceTab('alerts')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'alerts'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="Alerts Manager"
+            >
+              <span className="material-symbols-outlined text-[22px]">notifications_active</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Alerts</span>
+            </button>
+          )}
 
           {user?.role === 'admin' && (
             <>

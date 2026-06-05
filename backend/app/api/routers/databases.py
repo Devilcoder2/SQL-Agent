@@ -2,10 +2,10 @@ import os
 from typing import Dict, Any, List
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException, Depends
-from app.core.auth import get_current_user, auth_db
+from app.core.auth import get_current_user, auth_db, require_admin
 from app.core.database import DatabaseManager, get_db_manager
 from app.core.vector_store import VectorStoreManager
-from app.api.schemas import AddDatabaseRequest
+from app.api.schemas import AddDatabaseRequest, SetDatabasePermissionRequest
 
 router = APIRouter(prefix="/api/v1/databases", tags=["Databases"])
 vector_store = VectorStoreManager()
@@ -54,6 +54,12 @@ async def get_databases(current_user: dict = Depends(get_current_user)):
             "alias": db["alias"],
             "connection_url": db["connection_url"]
         })
+        
+    # If not admin, filter databases based on user_database_permissions
+    if current_user["role"] != "admin":
+        permitted_db_ids = await auth_db.get_user_permitted_databases(current_user["id"])
+        databases = [db for db in databases if db["id"] in permitted_db_ids]
+        
     return {"databases": databases}
 
 @router.post("")
@@ -117,3 +123,51 @@ async def delete_database(db_id: str, current_user: dict = Depends(get_current_u
         print(f"Warning: Failed to delete tables from vector store: {e}")
         
     return {"status": "success", "message": f"Database {db_id} disconnected successfully."}
+
+@router.get("/{db_id}/permissions")
+async def get_database_permissions(db_id: str, current_user: dict = Depends(require_admin)):
+    users = await auth_db.get_enterprise_users(current_user["enterprise_id"])
+    permitted_user_ids = []
+    
+    # Query which users have access to db_id
+    query = "SELECT user_id FROM user_database_permissions WHERE database_id = :database_id;"
+    rows = await auth_db.db_manager.execute_query(query, {"database_id": db_id})
+    permitted_user_ids = {row["user_id"] for row in rows}
+    
+    result = []
+    for u in users:
+        # Admins always have access, others based on permitted_user_ids
+        has_access = True if u["role"] == "admin" else (u["id"] in permitted_user_ids)
+        result.append({
+            "id": u["id"],
+            "username": u["username"],
+            "role": u["role"],
+            "has_access": has_access
+        })
+    return {"users": result}
+
+@router.post("/{db_id}/permissions")
+async def set_database_permission(
+    db_id: str, 
+    req: SetDatabasePermissionRequest, 
+    current_user: dict = Depends(require_admin)
+):
+    # Retrieve target user to make sure they belong to same enterprise
+    target_user = await auth_db.get_user_by_id(req.user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    if current_user["enterprise_id"] != target_user["enterprise_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden: User belongs to another enterprise.")
+        
+    if target_user["role"] == "admin":
+        raise HTTPException(status_code=400, detail="Cannot change database permissions for administrators.")
+        
+    if req.has_access:
+        await auth_db.grant_database_access(req.user_id, db_id)
+    else:
+        # Default database access is also revokable, but let's make sure they aren't locked out entirely if they need it.
+        # But yes, the prompt says "as all users may not require access to all the databases, so admin should be able to control that"
+        await auth_db.revoke_database_access(req.user_id, db_id)
+        
+    return {"status": "success", "message": "Database permission updated."}

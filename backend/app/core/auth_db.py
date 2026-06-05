@@ -34,6 +34,8 @@ class AuthDatabaseManager:
             role TEXT, -- 'admin' | 'analyst' | 'general'
             tenant_type TEXT, -- 'single' | 'enterprise'
             enterprise_id INTEGER,
+            can_view_alerts INTEGER DEFAULT 1,
+            can_view_schema INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (enterprise_id) REFERENCES enterprises(id) ON DELETE CASCADE
         );
@@ -48,10 +50,37 @@ class AuthDatabaseManager:
             FOREIGN KEY (enterprise_id) REFERENCES enterprises(id) ON DELETE CASCADE
         );
         """
+        create_user_db_permissions = """
+        CREATE TABLE IF NOT EXISTS user_database_permissions (
+            user_id INTEGER,
+            database_id TEXT,
+            PRIMARY KEY (user_id, database_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """
         async with self.db_manager.engine.begin() as conn:
             await conn.execute(text(create_enterprises))
             await conn.execute(text(create_users))
             await conn.execute(text(create_databases))
+            
+            # Run ALTER TABLE to migrate existing users table schema if columns are missing
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN can_view_alerts INTEGER DEFAULT 1;"))
+            except Exception:
+                pass # already exists
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN can_view_schema INTEGER DEFAULT 1;"))
+            except Exception:
+                pass # already exists
+                
+            await conn.execute(text(create_user_db_permissions))
+            
+            # Migrate: Grant default DB access to all existing users if user_database_permissions is empty or just do it for all users
+            grant_default_migration = """
+            INSERT OR IGNORE INTO user_database_permissions (user_id, database_id)
+            SELECT id, 'default' FROM users;
+            """
+            await conn.execute(text(grant_default_migration))
 
     async def create_enterprise(self, name: str) -> int:
         """Registers a new corporate enterprise and returns its ID."""
@@ -88,8 +117,8 @@ class AuthDatabaseManager:
     ) -> int:
         """Registers a new user and returns its ID."""
         insert_query = """
-        INSERT INTO users (username, password_hash, role, tenant_type, enterprise_id)
-        VALUES (:username, :password_hash, :role, :tenant_type, :enterprise_id)
+        INSERT INTO users (username, password_hash, role, tenant_type, enterprise_id, can_view_alerts, can_view_schema)
+        VALUES (:username, :password_hash, :role, :tenant_type, :enterprise_id, 1, 1)
         RETURNING id;
         """
         params = {
@@ -102,17 +131,22 @@ class AuthDatabaseManager:
         async with self.db_manager.engine.begin() as conn:
             result = await conn.execute(text(insert_query), params)
             row = result.fetchone()
-            if row:
-                return row[0]
+            user_id = row[0] if row else None
+            
+        if not user_id:
             # Fallback
             select_query = "SELECT id FROM users WHERE username = :username;"
             res = await self.db_manager.execute_query(select_query, {"username": username.strip()})
-            return res[0]["id"]
+            user_id = res[0]["id"]
+            
+        # Grant database access to default
+        await self.grant_database_access(user_id, "default")
+        return user_id
 
     async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Queries database for user by their unique login handle."""
         query = """
-        SELECT u.id, u.username, u.password_hash, u.role, u.tenant_type, u.enterprise_id, e.name AS enterprise_name 
+        SELECT u.id, u.username, u.password_hash, u.role, u.tenant_type, u.enterprise_id, u.can_view_alerts, u.can_view_schema, e.name AS enterprise_name 
         FROM users u 
         LEFT JOIN enterprises e ON u.enterprise_id = e.id 
         WHERE u.username = :username;
@@ -123,7 +157,7 @@ class AuthDatabaseManager:
     async def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Queries user profile details by numeric primary key."""
         query = """
-        SELECT u.id, u.username, u.role, u.tenant_type, u.enterprise_id, e.name AS enterprise_name
+        SELECT u.id, u.username, u.role, u.tenant_type, u.enterprise_id, u.can_view_alerts, u.can_view_schema, e.name AS enterprise_name
         FROM users u 
         LEFT JOIN enterprises e ON u.enterprise_id = e.id 
         WHERE u.id = :id;
@@ -134,10 +168,10 @@ class AuthDatabaseManager:
     async def get_enterprise_users(self, enterprise_id: Optional[int]) -> List[Dict[str, Any]]:
         """Returns all registered users belonging to an enterprise organization or single users if enterprise_id is None."""
         if enterprise_id is not None:
-            query = "SELECT id, username, role, tenant_type, created_at FROM users WHERE enterprise_id = :enterprise_id ORDER BY id ASC;"
+            query = "SELECT id, username, role, tenant_type, can_view_alerts, can_view_schema, created_at FROM users WHERE enterprise_id = :enterprise_id ORDER BY id ASC;"
             params = {"enterprise_id": enterprise_id}
         else:
-            query = "SELECT id, username, role, tenant_type, created_at FROM users WHERE enterprise_id IS NULL ORDER BY id ASC;"
+            query = "SELECT id, username, role, tenant_type, can_view_alerts, can_view_schema, created_at FROM users WHERE enterprise_id IS NULL ORDER BY id ASC;"
             params = {}
         return await self.db_manager.execute_query(query, params)
 
@@ -220,6 +254,71 @@ class AuthDatabaseManager:
         async with self.db_manager.engine.begin() as conn:
             result = await conn.execute(text(query), params)
             return result.rowcount > 0
+
+    async def update_user_feature_permissions(
+        self, 
+        user_id: int, 
+        can_view_alerts: int, 
+        can_view_schema: int, 
+        enterprise_id: Optional[int]
+    ) -> bool:
+        """Updates the feature visibility permissions of a user."""
+        if enterprise_id is not None:
+            update_query = """
+            UPDATE users 
+            SET can_view_alerts = :can_view_alerts, can_view_schema = :can_view_schema 
+            WHERE id = :id AND enterprise_id = :enterprise_id;
+            """
+            params = {
+                "can_view_alerts": can_view_alerts, 
+                "can_view_schema": can_view_schema, 
+                "id": user_id, 
+                "enterprise_id": enterprise_id
+            }
+        else:
+            update_query = """
+            UPDATE users 
+            SET can_view_alerts = :can_view_alerts, can_view_schema = :can_view_schema 
+            WHERE id = :id AND enterprise_id IS NULL;
+            """
+            params = {
+                "can_view_alerts": can_view_alerts, 
+                "can_view_schema": can_view_schema, 
+                "id": user_id
+            }
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(update_query), params)
+            return result.rowcount > 0
+
+    async def grant_database_access(self, user_id: int, database_id: str):
+        """Grants a user access to a specific database ID."""
+        insert_query = """
+        INSERT OR IGNORE INTO user_database_permissions (user_id, database_id)
+        VALUES (:user_id, :database_id);
+        """
+        async with self.db_manager.engine.begin() as conn:
+            await conn.execute(text(insert_query), {"user_id": user_id, "database_id": database_id})
+
+    async def revoke_database_access(self, user_id: int, database_id: str):
+        """Revokes a user's access to a specific database ID."""
+        delete_query = """
+        DELETE FROM user_database_permissions 
+        WHERE user_id = :user_id AND database_id = :database_id;
+        """
+        async with self.db_manager.engine.begin() as conn:
+            await conn.execute(text(delete_query), {"user_id": user_id, "database_id": database_id})
+
+    async def get_user_permitted_databases(self, user_id: int) -> List[str]:
+        """Returns the list of database IDs a user has access to."""
+        query = "SELECT database_id FROM user_database_permissions WHERE user_id = :user_id;"
+        rows = await self.db_manager.execute_query(query, {"user_id": user_id})
+        return [row["database_id"] for row in rows]
+
+    async def check_user_database_access(self, user_id: int, database_id: str) -> bool:
+        """Checks if a user has access to a specific database."""
+        query = "SELECT 1 FROM user_database_permissions WHERE user_id = :user_id AND database_id = :database_id;"
+        rows = await self.db_manager.execute_query(query, {"user_id": user_id, "database_id": database_id})
+        return len(rows) > 0
 
     async def close(self):
         await self.db_manager.close()

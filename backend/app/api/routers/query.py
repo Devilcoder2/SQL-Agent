@@ -80,7 +80,9 @@ async def run_query(
         raise HTTPException(status_code=500, detail=f"Agent execution error: {str(e)}")
 
 @router.get("/api/v1/tables")
-async def get_tables(active_db: dict = Depends(get_active_db)):
+async def get_tables(active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_schema", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to view schemas.")
     try:
         db = get_db_manager(active_db["url"])
         tables = await db.get_table_names()
@@ -89,7 +91,9 @@ async def get_tables(active_db: dict = Depends(get_active_db)):
         raise HTTPException(status_code=500, detail=f"Failed to fetch table list: {str(e)}")
 
 @router.get("/api/v1/tables/{table_name}/schema")
-async def get_table_schema(table_name: str, active_db: dict = Depends(get_active_db)):
+async def get_table_schema(table_name: str, active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_schema", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to view schemas.")
     try:
         db = get_db_manager(active_db["url"])
         tables = await db.get_table_names()

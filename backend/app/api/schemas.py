@@ -65,3 +65,15 @@ class CreateAlertRequest(BaseModel):
 class AddDatabaseRequest(BaseModel):
     alias: str
     connection_url: str
+
+class UpdateUserPermissionsRequest(BaseModel):
+    can_view_alerts: bool
+    can_view_schema: bool
+
+class SetDatabasePermissionRequest(BaseModel):
+    user_id: int
+    has_access: bool
+
+class SetUserDatabasePermissionRequest(BaseModel):
+    database_id: str
+    has_access: bool

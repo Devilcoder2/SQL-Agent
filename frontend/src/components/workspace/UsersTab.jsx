@@ -7,6 +7,11 @@ export default function UsersTab({ fetch, user }) {
   const [newStaffRole, setNewStaffRole] = useState("general"); // 'general' | 'analyst' | 'admin'
   const [isRegisteringStaff, setIsRegisteringStaff] = useState(false);
 
+  // User DB Access States
+  const [permissionUser, setPermissionUser] = useState(null);
+  const [userDatabases, setUserDatabases] = useState([]);
+  const [loadingUserDatabases, setLoadingUserDatabases] = useState(false);
+
   useEffect(() => {
     fetchEnterpriseUsers();
   }, []);
@@ -95,8 +100,70 @@ export default function UsersTab({ fetch, user }) {
     }
   };
 
+  const handleTogglePermission = async (userId, field, checked) => {
+    const member = enterpriseUsers.find(u => u.id === userId);
+    if (!member) return;
+
+    const updatedPermissions = {
+      can_view_alerts: field === 'can_view_alerts' ? checked : (member.can_view_alerts !== 0),
+      can_view_schema: field === 'can_view_schema' ? checked : (member.can_view_schema !== 0)
+    };
+
+    try {
+      const res = await fetch(`/api/v1/enterprise/users/${userId}/permissions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedPermissions)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to update permissions.");
+      }
+      fetchEnterpriseUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const openUserDbModal = async (member) => {
+    setPermissionUser(member);
+    setLoadingUserDatabases(true);
+    try {
+      const res = await fetch(`/api/v1/enterprise/users/${member.id}/databases`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserDatabases(data.databases || []);
+      }
+    } catch (err) {
+      console.error("Error fetching user databases:", err);
+    } finally {
+      setLoadingUserDatabases(false);
+    }
+  };
+
+  const handleToggleUserDbPermission = async (dbItem, hasAccess) => {
+    try {
+      const res = await fetch(`/api/v1/enterprise/users/${permissionUser.id}/databases`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          database_id: dbItem.id,
+          has_access: hasAccess
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to update database permission.");
+      }
+      setUserDatabases(prev => prev.map(db => db.id === dbItem.id ? { ...db, has_access: hasAccess } : db));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
-    <div className="h-full w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden select-text text-left">
+    <>
+      <div className="h-full w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden select-text text-left">
       
       {/* Left Column: Create user form (Col span 5) */}
       <div className="glass-card rounded-2xl lg:col-span-5 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
@@ -189,6 +256,30 @@ export default function UsersTab({ fetch, user }) {
                   </div>
 
                   <div className="flex items-center gap-3">
+                    {/* Permissions checklist */}
+                    {!isSelf && member.role !== 'admin' && (
+                      <div className="flex items-center gap-3 border-r border-white/10 pr-3 mr-1 text-[10px] select-none text-[#c3c6d7]/60">
+                        <label className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={member.can_view_alerts !== 0}
+                            onChange={(e) => handleTogglePermission(member.id, 'can_view_alerts', e.target.checked)}
+                            className="rounded accent-primary border-white/10 bg-[#020617] w-3 h-3 cursor-pointer"
+                          />
+                          <span>Alerts</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={member.can_view_schema !== 0}
+                            onChange={(e) => handleTogglePermission(member.id, 'can_view_schema', e.target.checked)}
+                            className="rounded accent-primary border-white/10 bg-[#020617] w-3 h-3 cursor-pointer"
+                          />
+                          <span>Schema</span>
+                        </label>
+                      </div>
+                    )}
+
                     {/* Role Select dropdown */}
                     <div>
                       <select
@@ -207,6 +298,17 @@ export default function UsersTab({ fetch, user }) {
                       </select>
                     </div>
 
+                    {/* Database Access button */}
+                    {!isSelf && member.role !== 'admin' && (
+                      <button
+                        onClick={() => openUserDbModal(member)}
+                        className="text-primary/70 hover:text-primary bg-transparent border-none cursor-pointer flex items-center p-1 transition-colors mr-1"
+                        title="Manage Database Access"
+                      >
+                        <span className="material-symbols-outlined text-base">database</span>
+                      </button>
+                    )}
+
                     {/* Delete button */}
                     <button
                       onClick={() => handleDeleteEnterpriseUser(member.id)}
@@ -223,7 +325,81 @@ export default function UsersTab({ fetch, user }) {
           )}
         </div>
       </div>
-
     </div>
+
+      {/* User Database Permissions Modal Overlay */}
+      {permissionUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in text-left">
+          <div className="glass-card w-full max-w-md bg-[#0b1326]/90 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">database</span>
+                Database Access: <span className="text-secondary font-mono text-xs font-bold">{permissionUser.username}</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setPermissionUser(null);
+                  setUserDatabases([]);
+                }}
+                className="text-[#c3c6d7] hover:text-white bg-transparent border-none cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-[10px] text-[#c3c6d7]/70 leading-relaxed bg-[#131b2e]/40 border border-white/5 rounded-xl p-3">
+                Select which databases this user has authorization to access. Administrators automatically have full access to all databases.
+              </p>
+
+              <div className="max-h-60 overflow-y-auto space-y-2.5 custom-scrollbar pr-1">
+                {loadingUserDatabases ? (
+                  <div className="text-xs text-[#c3c6d7]/30 italic py-6 text-center">Loading databases...</div>
+                ) : userDatabases.length === 0 ? (
+                  <div className="text-xs text-[#c3c6d7]/30 italic py-6 text-center">No databases configured.</div>
+                ) : (
+                  userDatabases.map(dbItem => {
+                    const isAdmin = permissionUser.role === 'admin';
+                    return (
+                      <div key={dbItem.id} className="p-3 border border-white/5 bg-[#0b1326]/40 rounded-xl flex items-center justify-between gap-4 text-xs">
+                        <div>
+                          <span className="font-extrabold text-white">{dbItem.alias}</span>
+                          {dbItem.id === 'default' && (
+                            <span className="ml-2 bg-white/5 text-white/40 text-[8px] px-1.5 py-0.5 rounded font-mono uppercase font-bold">
+                              system
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <input
+                            type="checkbox"
+                            checked={dbItem.has_access}
+                            disabled={isAdmin}
+                            onChange={(e) => handleToggleUserDbPermission(dbItem, e.target.checked)}
+                            className="rounded accent-primary border-white/10 bg-[#020617] w-4 h-4 cursor-pointer disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    setPermissionUser(null);
+                    setUserDatabases([]);
+                  }}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white text-xs font-bold py-2.5 rounded-xl border border-white/15 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

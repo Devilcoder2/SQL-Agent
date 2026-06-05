@@ -6,7 +6,8 @@ from app.core.auth import (
 )
 from app.api.schemas import (
     RegisterSingleRequest, RegisterEnterpriseRequest, LoginRequest, 
-    CreateEnterpriseUserRequest, UpdateUserRoleRequest
+    CreateEnterpriseUserRequest, UpdateUserRoleRequest, UpdateUserPermissionsRequest,
+    SetUserDatabasePermissionRequest
 )
 
 router = APIRouter(prefix="/api/v1", tags=["Authentication"])
@@ -76,7 +77,9 @@ async def login(req: LoginRequest):
             "username": user["username"],
             "role": user["role"],
             "tenant_type": user["tenant_type"],
-            "enterprise_name": user["enterprise_name"]
+            "enterprise_name": user["enterprise_name"],
+            "can_view_alerts": user.get("can_view_alerts", 1) == 1,
+            "can_view_schema": user.get("can_view_schema", 1) == 1
         }
     }
 
@@ -126,3 +129,84 @@ async def update_enterprise_user_role(user_id: int, req: UpdateUserRoleRequest, 
         raise HTTPException(status_code=404, detail="User not found in this enterprise.")
     
     return {"status": "success", "message": "User role updated successfully."}
+
+@router.put("/enterprise/users/{user_id}/permissions")
+async def update_enterprise_user_permissions(
+    user_id: int, 
+    req: UpdateUserPermissionsRequest, 
+    current_user: dict = Depends(require_admin)
+):
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot change your own administrative permissions.")
+    
+    updated = await auth_db.update_user_feature_permissions(
+        user_id, 
+        1 if req.can_view_alerts else 0, 
+        1 if req.can_view_schema else 0, 
+        current_user["enterprise_id"]
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found in this enterprise.")
+    
+    return {"status": "success", "message": "User permissions updated successfully."}
+
+@router.get("/enterprise/users/{user_id}/databases")
+async def get_user_database_permissions(
+    user_id: int, 
+    current_user: dict = Depends(require_admin)
+):
+    target_user = await auth_db.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    if current_user["enterprise_id"] != target_user["enterprise_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden: User belongs to another enterprise.")
+        
+    db_records = await auth_db.get_databases(enterprise_id=current_user["enterprise_id"])
+    databases = [
+        {
+            "id": "default",
+            "alias": "Default (Chinook)"
+        }
+    ]
+    for db in db_records:
+        databases.append({
+            "id": str(db["id"]),
+            "alias": db["alias"]
+        })
+        
+    permitted_db_ids = await auth_db.get_user_permitted_databases(user_id)
+    
+    result = []
+    for db in databases:
+        has_access = True if target_user["role"] == "admin" else (db["id"] in permitted_db_ids)
+        result.append({
+            "id": db["id"],
+            "alias": db["alias"],
+            "has_access": has_access
+        })
+        
+    return {"databases": result}
+
+@router.post("/enterprise/users/{user_id}/databases")
+async def set_user_database_permission(
+    user_id: int, 
+    req: SetUserDatabasePermissionRequest, 
+    current_user: dict = Depends(require_admin)
+):
+    target_user = await auth_db.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    if current_user["enterprise_id"] != target_user["enterprise_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden: User belongs to another enterprise.")
+        
+    if target_user["role"] == "admin":
+        raise HTTPException(status_code=400, detail="Cannot change database permissions for administrators.")
+        
+    if req.has_access:
+        await auth_db.grant_database_access(user_id, req.database_id)
+    else:
+        await auth_db.revoke_database_access(user_id, req.database_id)
+        
+    return {"status": "success", "message": "User database access updated."}

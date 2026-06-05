@@ -99,7 +99,9 @@ async def alert_scheduler_loop():
         await asyncio.sleep(5)
 
 @router.get("/alerts")
-async def get_alerts(active_db: dict = Depends(get_active_db)):
+async def get_alerts(active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_alerts", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to view Alerts.")
     filtered_alerts = [
         a for a in ALERTS_REGISTRY 
         if a.get("database_id") == active_db["id"] or (active_db["id"] == "default" and not a.get("database_id"))
@@ -107,7 +109,9 @@ async def get_alerts(active_db: dict = Depends(get_active_db)):
     return {"alerts": filtered_alerts}
 
 @router.post("/alerts")
-async def create_alert(req: CreateAlertRequest, active_db: dict = Depends(get_active_db)):
+async def create_alert(req: CreateAlertRequest, active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_alerts", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to manage Alerts.")
     new_alert = {
         "id": f"alert_{len(ALERTS_REGISTRY) + 1}",
         "name": req.name,
@@ -122,7 +126,9 @@ async def create_alert(req: CreateAlertRequest, active_db: dict = Depends(get_ac
     return {"status": "success", "alert": new_alert}
 
 @router.get("/alerts/logs")
-async def get_alerts_logs(active_db: dict = Depends(get_active_db)):
+async def get_alerts_logs(active_db: dict = Depends(get_active_db), current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_alerts", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to view Alerts.")
     filtered_logs = [
         l for l in ALERTS_LOGS
         if l.get("database_id") == active_db["id"] or (active_db["id"] == "default" and not l.get("database_id"))
@@ -130,7 +136,9 @@ async def get_alerts_logs(active_db: dict = Depends(get_active_db)):
     return {"logs": filtered_logs}
 
 @router.post("/alerts/{alert_id}/reset")
-async def reset_alert(alert_id: str):
+async def reset_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
+    if not current_user.get("can_view_alerts", True):
+        raise HTTPException(status_code=403, detail="Permission Denied: You do not have permission to reset Alerts.")
     for alert in ALERTS_REGISTRY:
         if alert["id"] == alert_id:
             alert["status"] = "Active"

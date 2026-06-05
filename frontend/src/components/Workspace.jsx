@@ -70,6 +70,15 @@ export default function Workspace({ setView }) {
     fetchDatabases();
   }, [token, activeDatabaseId]);
 
+  useEffect(() => {
+    if (workspaceTab === 'alerts' && user?.can_view_alerts === false) {
+      setWorkspaceTab('console');
+    }
+    if (workspaceTab === 'schema' && user?.can_view_schema === false) {
+      setWorkspaceTab('console');
+    }
+  }, [workspaceTab, user]);
+
   const handleAuthSuccess = (newToken, newUser) => {
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
@@ -154,13 +163,13 @@ export default function Workspace({ setView }) {
           )}
 
           {/* VIEW C: Schema & Glossary View */}
-          {workspaceTab === 'schema' && (
+          {workspaceTab === 'schema' && user?.can_view_schema !== false && (
             <SchemaTab fetch={fetchWrapper} activeDatabaseId={activeDatabaseId} />
           )}
 
 
           {/* VIEW E: Alerts Manager Tab */}
-          {workspaceTab === 'alerts' && (
+          {workspaceTab === 'alerts' && user?.can_view_alerts !== false && (
             <AlertsTab fetch={fetchWrapper} token={token} activeDatabaseId={activeDatabaseId} />
           )}
 

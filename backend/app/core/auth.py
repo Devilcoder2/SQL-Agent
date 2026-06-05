@@ -91,7 +91,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any
         "role": user["role"],
         "tenant_type": user["tenant_type"],
         "enterprise_id": user["enterprise_id"],
-        "enterprise_name": user.get("enterprise_name")
+        "enterprise_name": user.get("enterprise_name"),
+        "can_view_alerts": user.get("can_view_alerts", 1) == 1,
+        "can_view_schema": user.get("can_view_schema", 1) == 1
     }
 
 async def require_admin(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
@@ -150,6 +152,15 @@ async def get_active_db(
                 detail="Forbidden: Database access denied."
             )
             
+    # Check granular user-database permissions
+    if current_user["role"] != "admin":
+        has_access = await auth_db.check_user_database_access(current_user["id"], db_id)
+        if not has_access:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Database access denied by administrator."
+            )
+
     return {
         "id": str(db_record["id"]),
         "alias": db_record["alias"],
