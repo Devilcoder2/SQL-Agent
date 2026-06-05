@@ -53,18 +53,7 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
             <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Schema</span>
           </button>
 
-          <button
-            onClick={() => setWorkspaceTab('warroom')}
-            className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
-              workspaceTab === 'warroom'
-                ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
-                : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
-            }`}
-            title="War Room Canvas"
-          >
-            <span className="material-symbols-outlined text-[22px]">group</span>
-            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">War Room</span>
-          </button>
+
 
           <button
             onClick={() => setWorkspaceTab('alerts')}

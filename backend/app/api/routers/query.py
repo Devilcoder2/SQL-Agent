@@ -1,7 +1,7 @@
 import time
 from typing import List, Dict, Any, Optional, Set
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Form
+from fastapi import APIRouter, HTTPException, Depends, Form
 from app.agents.sql_agent import agent_executor, db_manager, vector_store
 from app.core.auth import get_current_user, get_active_db
 from app.core.database import get_db_manager
@@ -124,45 +124,7 @@ async def add_glossary_term(request: GlossaryTermRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to register glossary term: {str(e)}")
 
-# --- WEBSOCKET Room Session Manager ---
-class ConnectionManager: 
-    def __init__(self): 
-        self.active_connections: Dict[str, Set[WebSocket]] = {}
-    
-    async def connect(self, websocket: WebSocket, room_id: str): 
-        await websocket.accept()
 
-        if room_id not in self.active_connections: 
-            self.active_connections[room_id] = set()
-        self.active_connections[room_id].add(websocket)
-    
-    def disconnect(self, websocket: WebSocket, room_id: str): 
-        if room_id in self.active_connections: 
-            self.active_connections[room_id].remove(websocket)
-            if not self.active_connections[room_id]: 
-                del self.active_connections[room_id]
-    
-    async def broadcast(self, message: dict, room_id: str, exclude_websocket: WebSocket = None): 
-        if room_id in self.active_connections: 
-            for connection in self.active_connections[room_id]: 
-                if connection != exclude_websocket: 
-                    try: 
-                        await connection.send_json(message)
-                    except Exception: 
-                        pass
-
-manager = ConnectionManager()
-
-@router.websocket("/ws/warroom/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str): 
-    await manager.connect(websocket, room_id)
-    try: 
-        while True: 
-            data = await websocket.receive_json()
-            await manager.broadcast(data, room_id, exclude_websocket=websocket)
-    
-    except WebSocketDisconnect: 
-        manager.disconnect(websocket, room_id)
 
 # --- Slack Webhook slash command receiver ---
 @router.post("/api/v1/webhooks/slack")

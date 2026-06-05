@@ -108,7 +108,6 @@ export default function Header({
             {workspaceTab === 'console' && '💬 Agent Chat Console'}
             {workspaceTab === 'studio' && '📊 Data Studio Visuals'}
             {workspaceTab === 'schema' && '🗄️ Database Introspection'}
-            {workspaceTab === 'warroom' && '🤝 Collaborative War Room'}
             {workspaceTab === 'alerts' && '🔔 Smoke Detector Alerts'}
             {workspaceTab === 'users' && '👥 Enterprise Users Dashboard'}
             {workspaceTab === 'databases' && '🗄️ Database Connections Management'}

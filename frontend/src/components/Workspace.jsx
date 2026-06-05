@@ -5,7 +5,6 @@ import AuthPanel from './workspace/AuthPanel';
 import ConsoleTab from './workspace/ConsoleTab';
 import StudioTab from './workspace/StudioTab';
 import SchemaTab from './workspace/SchemaTab';
-import WarRoomTab from './workspace/WarRoomTab';
 import AlertsTab from './workspace/AlertsTab';
 import UsersTab from './workspace/UsersTab';
 import DatabasesTab from './workspace/DatabasesTab';
@@ -159,10 +158,6 @@ export default function Workspace({ setView }) {
             <SchemaTab fetch={fetchWrapper} activeDatabaseId={activeDatabaseId} />
           )}
 
-          {/* VIEW D: Collaborative War Room Tab */}
-          {workspaceTab === 'warroom' && (
-            <WarRoomTab role={role} />
-          )}
 
           {/* VIEW E: Alerts Manager Tab */}
           {workspaceTab === 'alerts' && (

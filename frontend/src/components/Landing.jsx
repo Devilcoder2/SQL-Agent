@@ -320,56 +320,6 @@ export default function Landing({ setView }) {
               </div>
             </div>
 
-            {/* Bento Card 5: Collaborative War Rooms (Wide - 2 Columns) */}
-            <div className="glass-card p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary/5 rounded-full blur-[60px] pointer-events-none" />
-              
-              {/* Floating Multiplayer Cursors (Aesthetics) */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-                {/* Cursor 1 */}
-                <div className="absolute top-[50%] left-[20%] flex gap-1.5 items-center animate-[float_8s_ease-in-out_infinite] z-20">
-                  <svg className="w-4 h-4 text-[#4edea3] fill-current drop-shadow-md" viewBox="0 0 24 24">
-                    <path d="M4.5 2.25l15 15-6.75 2.25-3-6-5.25-11.25z" />
-                  </svg>
-                  <span className="bg-secondary/90 backdrop-blur-sm text-[#020617] px-2 py-0.5 rounded text-[8px] font-bold shadow-md uppercase tracking-wider">
-                    Alice (Analyst)
-                  </span>
-                </div>
-                {/* Cursor 2 */}
-                <div className="absolute top-[30%] left-[70%] flex gap-1.5 items-center animate-[float_12s_ease-in-out_infinite] z-20" style={{ animationDelay: '3s' }}>
-                  <svg className="w-4 h-4 text-[#b4c5ff] fill-current drop-shadow-md" viewBox="0 0 24 24">
-                    <path d="M4.5 2.25l15 15-6.75 2.25-3-6-5.25-11.25z" />
-                  </svg>
-                  <span className="bg-primary/90 backdrop-blur-sm text-[#020617] px-2 py-0.5 rounded text-[8px] font-bold shadow-md uppercase tracking-wider">
-                    Sarah (CTO)
-                  </span>
-                </div>
-              </div>
-
-              <div className="z-10 flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center text-tertiary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
-                    </div>
-                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                      Roadmap Phase 4
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Real-Time Collaborative War Rooms</h3>
-                  <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed">
-                    Collaborate inside a WebSocket-synchronized whiteboard canvas. Move, inspect, and evaluate generated query configurations and metrics directly with your core management team.
-                  </p>
-                </div>
-                
-                {/* Visual Canvas Mockup */}
-                <div className="mt-6 h-20 bg-[#020617]/70 border border-white/5 rounded-xl flex gap-3 p-3 items-center justify-center relative overflow-hidden select-none">
-                  <div className="w-24 h-12 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center text-[9px] font-mono text-white/50">Query_1.sql</div>
-                  <div className="w-24 h-12 rounded border border-[#4edea3]/20 bg-[#4edea3]/5 flex items-center justify-center text-[9px] font-mono text-[#4edea3]">Chart_Sales.png</div>
-                </div>
-              </div>
-            </div>
-
             {/* Bento Card 6: Pitch-Ready Exporter (Standard - 1 Column) */}
             <div className="glass-card p-8 rounded-3xl flex flex-col justify-between relative group min-h-[300px]">
               <div className="z-10 flex flex-col justify-between h-full">
@@ -431,8 +381,8 @@ export default function Landing({ setView }) {
               </div>
             </div>
 
-            {/* Bento Card 8: Slack & Teams Messaging (Wide - 2 Columns) */}
-            <div className="glass-card p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
+            {/* Bento Card 8: Slack & Teams Messaging (Standard - 1 Column) */}
+            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
               <div className="absolute inset-0 bg-gradient-to-r from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
@@ -453,7 +403,7 @@ export default function Landing({ setView }) {
                 {/* Chat bubble mockup */}
                 <div className="mt-6 bg-[#020617]/70 border border-white/5 rounded-xl p-3.5 flex gap-3 items-start select-none">
                   <div className="w-7 h-7 rounded bg-[#4a154b] flex items-center justify-center font-bold text-white text-[10px]">S</div>
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-grow space-y-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-extrabold text-white">Slack App</span>
                       <span className="bg-white/10 text-white/50 text-[7px] px-1 rounded uppercase font-bold">Bot</span>
