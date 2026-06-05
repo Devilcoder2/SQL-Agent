@@ -31,10 +31,19 @@ export default function Workspace({ setView }) {
   // Search Results Table Filter
   const [studioSearch, setStudioSearch] = useState("");
 
+  // Whiteboard Draggable Cards State
+  const [pinnedCards, setPinnedCards] = useState({
+    queryCard: { x: 40, y: 40 },
+    chartCard: { x: 80, y: 220 },
+    narrativeCard: { x: 580, y: 50 },
+    stickyCard: { x: 640, y: 310 }
+  });
+
   // Refs and hooks
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const thoughtLogsEndRef = useRef(null);
+  const wsRef = useRef(null);
 
   // Multiplayer cursor state simulation for War Room
   const [cursors, setCursors] = useState([
@@ -49,6 +58,8 @@ export default function Workspace({ setView }) {
     // Cursor movement timeline
     const interval = setInterval(() => {
       setCursors(prev => prev.map(c => {
+        // Only animate local mockup cursors (IDs 1 & 2)
+        if (c.id !== 1 && c.id !== 2) return c;
         const angle = Date.now() * 0.001 * (c.id === 1 ? 1 : -0.8);
         const radius = c.id === 1 ? 80 : 120;
         const centerX = c.id === 1 ? 300 : 700;
@@ -63,6 +74,44 @@ export default function Workspace({ setView }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Handle WebSockets for real-time War Room cursor/card sync
+  useEffect(() => {
+    if (workspaceTab !== 'warroom') return;
+
+    // Connects to the FastAPI WS server (resolves Vite dev server port mapping)
+    const host = window.location.host.replace('5173', '8000');
+    const ws = new WebSocket(`ws://${host}/ws/warroom/1`);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'cursor') {
+          setCursors(prev => {
+            const exists = prev.some(c => c.id === data.id);
+            if (exists) {
+              return prev.map(c => c.id === data.id ? { ...c, x: data.x, y: data.y } : c);
+            } else {
+              return [...prev, data];
+            }
+          });
+        } else if (data.type === 'card_move') {
+          setPinnedCards(prev => ({
+            ...prev,
+            [data.cardId]: { x: data.x, y: data.y }
+          }));
+        }
+      } catch (err) {
+        console.error("Error parsing WS packet:", err);
+      }
+    };
+
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [workspaceTab]);
 
   // Scroll logs to bottom
   useEffect(() => {
@@ -350,6 +399,77 @@ export default function Workspace({ setView }) {
     });
   };
 
+  // --- Document Exporters ---
+  const handleExportExcel = async () => {
+    if (!queryResults) return;
+    try {
+      const res = await fetch("/api/v1/export/excel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ results: queryResults })
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `excel_report_${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      alert("Excel export failed: " + err.message);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!queryResults) return;
+    try {
+      const res = await fetch("/api/v1/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: query,
+          narrative: narrativeResponse || "No summary brief compiled.",
+          results: queryResults
+        })
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analytics_brief_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      alert("PDF export failed: " + err.message);
+    }
+  };
+
+  const handleExportPPTX = async () => {
+    try {
+      const res = await fetch("/api/v1/export/pptx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: query,
+          narrative: narrativeResponse || "No summary brief compiled.",
+          sql: generatedSql || "-- No SQL statement compiled."
+        })
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `slide_presentation_${Date.now()}.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      alert("PowerPoint export failed: " + err.message);
+    }
+  };
+
   const handleDownloadCSV = () => {
     if (!queryResults || queryResults.length === 0) return;
     const headers = Object.keys(queryResults[0]).join(",");
@@ -375,6 +495,67 @@ export default function Workspace({ setView }) {
       String(val).toLowerCase().includes(studioSearch.toLowerCase())
     )
   ) || [];
+
+  // WebSocket cursor update trigger
+  const handleMouseMove = (e) => {
+    if (workspaceTab !== 'warroom' || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    
+    wsRef.current.send(JSON.stringify({
+      type: 'cursor',
+      id: 99, // Current client ID
+      name: `You (${role.toUpperCase()})`,
+      x: x,
+      y: y,
+      color: '#4edea3'
+    }));
+  };
+
+  // Card movement drag transmitter
+  const handleCardDrag = (cardId, deltaX, deltaY) => {
+    setPinnedCards(prev => {
+      const newX = Math.max(0, prev[cardId].x + deltaX);
+      const newY = Math.max(0, prev[cardId].y + deltaY);
+      
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'card_move',
+          cardId: cardId,
+          x: newX,
+          y: newY
+        }));
+      }
+      return {
+        ...prev,
+        [cardId]: { x: newX, y: newY }
+      };
+    });
+  };
+
+  const handleStartDrag = (e, cardId) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialX = pinnedCards[cardId].x;
+    const initialY = pinnedCards[cardId].y;
+
+    const handleMouseDrag = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      handleCardDrag(cardId, deltaX, deltaY);
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseDrag);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseDrag);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   return (
     <div className="h-screen w-screen flex bg-[#020617] text-[#dae2fd] overflow-hidden select-none font-sans">
@@ -472,7 +653,7 @@ export default function Workspace({ setView }) {
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#131b2e] border border-white/5 select-none">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse" />
               <span>sqlite: <code className="text-secondary font-mono">chinook.db</code></span>
             </div>
           </div>
@@ -593,9 +774,15 @@ export default function Workspace({ setView }) {
                         {securityStatus}
                       </span>
                     </div>
-                    <button onClick={handleCopySql} className="text-[#c3c6d7] hover:text-white transition-colors bg-transparent border-none cursor-pointer">
-                      <span className="material-symbols-outlined text-base">content_copy</span>
-                    </button>
+                    
+                    <div className="flex items-center gap-3">
+                      <button onClick={handleExportPPTX} className="text-[#c3c6d7] hover:text-white transition-colors bg-transparent border-none cursor-pointer" title="Export PPTX Presentation">
+                        <span className="material-symbols-outlined text-base">present_to_all</span>
+                      </button>
+                      <button onClick={handleCopySql} className="text-[#c3c6d7] hover:text-white transition-colors bg-transparent border-none cursor-pointer" title="Copy SQL Code">
+                        <span className="material-symbols-outlined text-base">content_copy</span>
+                      </button>
+                    </div>
                   </div>
                   
                   {/* Monaco Editor code container */}
@@ -658,14 +845,32 @@ export default function Workspace({ setView }) {
                       placeholder="Filter grid rows..."
                       value={studioSearch}
                       onChange={e => setStudioSearch(e.target.value)}
-                      className="bg-[#020617] border border-white/5 text-xs px-2.5 py-1 rounded-lg text-white focus:outline-none placeholder-white/20 outline-none w-36 sm:w-48"
+                      className="bg-[#020617] border border-white/5 text-xs px-2.5 py-1 rounded-lg text-white focus:outline-none placeholder-white/20 outline-none w-32 sm:w-40"
                     />
 
-                    {/* Exporter Button */}
+                    {/* Exporter Buttons */}
+                    <button
+                      onClick={handleExportExcel}
+                      disabled={!queryResults}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">grid_on</span>
+                      Excel
+                    </button>
+
+                    <button
+                      onClick={handleExportPDF}
+                      disabled={!queryResults}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#4edea3]/20 bg-[#4edea3]/5 text-[#4edea3] hover:bg-[#4edea3]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                      PDF Report
+                    </button>
+
                     <button
                       onClick={handleDownloadCSV}
                       disabled={!queryResults || queryResults.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#4edea3]/20 bg-[#4edea3]/5 text-[#4edea3] hover:bg-[#4edea3]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">download</span>
                       CSV
@@ -877,7 +1082,10 @@ export default function Workspace({ setView }) {
             <div className="h-full w-full flex flex-col overflow-hidden relative rounded-2xl border border-white/5 bg-[#0b1326]/10">
               
               {/* Whiteboard dotted viewport */}
-              <div className="flex-grow relative dotted-grid overflow-hidden flex items-center justify-center p-6">
+              <div 
+                className="flex-grow relative dotted-grid overflow-hidden flex items-center justify-center p-6"
+                onMouseMove={handleMouseMove}
+              >
                 
                 {/* Visual grid watermark title */}
                 <div className="absolute top-4 left-6 text-left select-none pointer-events-none">
@@ -908,7 +1116,11 @@ export default function Workspace({ setView }) {
                 <div className="relative w-full h-full max-w-5xl max-h-[500px]">
                   
                   {/* Card A: Compiled Statement card */}
-                  <div className="absolute top-[5%] left-[5%] w-72 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10">
+                  <div 
+                    className="absolute w-72 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10 cursor-move"
+                    style={{ left: `${pinnedCards.queryCard.x}px`, top: `${pinnedCards.queryCard.y}px` }}
+                    onMouseDown={(e) => handleStartDrag(e, 'queryCard')}
+                  >
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-primary">
                       <span>Query Statement</span>
                       <span className="w-2 h-2 rounded-full bg-secondary" />
@@ -919,7 +1131,11 @@ export default function Workspace({ setView }) {
                   </div>
 
                   {/* Card B: static mini-chart visualizer card */}
-                  <div className="absolute top-[45%] left-[10%] w-80 p-4 bg-[#0b1326]/85 border border-[#4edea3]/20 rounded-2xl shadow-xl select-none z-10">
+                  <div 
+                    className="absolute w-80 p-4 bg-[#0b1326]/85 border border-[#4edea3]/20 rounded-2xl shadow-xl select-none z-10 cursor-move"
+                    style={{ left: `${pinnedCards.chartCard.x}px`, top: `${pinnedCards.chartCard.y}px` }}
+                    onMouseDown={(e) => handleStartDrag(e, 'chartCard')}
+                  >
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-secondary">
                       <span>Sales Summary Chart</span>
                       <span className="text-[8px] border border-[#4edea3]/30 px-1 rounded">2026</span>
@@ -933,7 +1149,11 @@ export default function Workspace({ setView }) {
                   </div>
 
                   {/* Card C: TLDR narrative brief card */}
-                  <div className="absolute top-[10%] left-[55%] w-80 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10">
+                  <div 
+                    className="absolute w-80 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10 cursor-move"
+                    style={{ left: `${pinnedCards.narrativeCard.x}px`, top: `${pinnedCards.narrativeCard.y}px` }}
+                    onMouseDown={(e) => handleStartDrag(e, 'narrativeCard')}
+                  >
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-tertiary">
                       <span>Executive Brief Card</span>
                       <span className="material-symbols-outlined text-[12px]">subject</span>
@@ -946,7 +1166,11 @@ export default function Workspace({ setView }) {
                   </div>
 
                   {/* Card D: Collaborative Yellow Sticky Note */}
-                  <div className="absolute top-[60%] left-[60%] w-60 p-4 bg-amber-400/90 text-[#302100] rounded-xl shadow-2xl rotate-2 select-none z-10 hover:rotate-0 transition-transform">
+                  <div 
+                    className="absolute w-60 p-4 bg-amber-400/90 text-[#302100] rounded-xl shadow-2xl rotate-2 select-none z-10 hover:rotate-0 transition-transform cursor-move"
+                    style={{ left: `${pinnedCards.stickyCard.x}px`, top: `${pinnedCards.stickyCard.y}px` }}
+                    onMouseDown={(e) => handleStartDrag(e, 'stickyCard')}
+                  >
                     <div className="text-[9px] uppercase font-extrabold opacity-60 tracking-wider mb-2">Team Note</div>
                     <p className="text-[11px] leading-relaxed font-bold font-sans">
                       "I verified the Brazil invoice counts with Sarah. The corrected query is compiled and ready to be exported to the client. Let's get feedback!"

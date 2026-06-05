@@ -327,6 +327,80 @@ async def export_pptx(req: PPTXExportRequest):
         headers={"Content-Disposition": "attachment; filename=briefing_deck.pptx"}
     )
 
+@app.post("/api/v1/export/pdf")
+async def export_pdf(req: PDFExportRequest):
+    file_stream = BytesIO()
+    doc = SimpleDocTemplate(file_stream, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    story = []
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=18,
+        textColor=colors.HexColor('#0F172A'),
+        spaceAfter=12
+    )
+    section_style = ParagraphStyle(
+        'DocSection',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        textColor=colors.HexColor('#2563EB'),
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    body_style = ParagraphStyle(
+        'DocBody',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor('#334155'),
+        spaceAfter=10
+    )
+    
+    story.append(Paragraph("AI SQL Agent Intelligence Report", title_style))
+    story.append(Paragraph(f"<b>Query Focus:</b> <i>\"{req.query}\"</i>", body_style))
+    story.append(Spacer(1, 10))
+    
+    story.append(Paragraph("Executive Narrative Brief", section_style))
+    story.append(Paragraph(req.narrative.replace("\n", "<br/>"), body_style))
+    story.append(Spacer(1, 10))
+    
+    if req.results:
+        story.append(Paragraph("Database Grid Extract (First 25 Rows)", section_style))
+        headers = list(req.results[0].keys())
+        data_table_content = [headers]
+        
+        for row in req.results[:25]:
+            data_table_content.append([str(row[h] if row[h] is not None else 'NULL') for h in headers])
+            
+        table = Table(data_table_content, colWidths=[(500 / len(headers))] * len(headers))
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+        ]))
+        story.append(table)
+        
+    doc.build(story)
+    file_stream.seek(0)
+    
+    return StreamingResponse(
+        file_stream,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=analytics_report.pdf"}
+    )
+
+
 
 # Mount static frontend files to root path
 frontend_dir = os.path.normpath(
