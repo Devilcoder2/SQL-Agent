@@ -58,6 +58,30 @@ class AuthDatabaseManager:
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
         """
+        create_chat_sessions = """
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            title TEXT,
+            database_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """
+        create_chat_messages = """
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER,
+            user_query TEXT,
+            generated_sql TEXT,
+            query_results TEXT,
+            execution_error TEXT,
+            retry_count INTEGER,
+            narrative_response TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+        );
+        """
         async with self.db_manager.engine.begin() as conn:
             await conn.execute(text(create_enterprises))
             await conn.execute(text(create_users))
@@ -74,6 +98,8 @@ class AuthDatabaseManager:
                 pass # already exists
                 
             await conn.execute(text(create_user_db_permissions))
+            await conn.execute(text(create_chat_sessions))
+            await conn.execute(text(create_chat_messages))
             
             # Migrate: Grant default DB access to all existing users if user_database_permissions is empty or just do it for all users
             grant_default_migration = """
@@ -319,6 +345,103 @@ class AuthDatabaseManager:
         query = "SELECT 1 FROM user_database_permissions WHERE user_id = :user_id AND database_id = :database_id;"
         rows = await self.db_manager.execute_query(query, {"user_id": user_id, "database_id": database_id})
         return len(rows) > 0
+
+    async def create_chat_session(self, user_id: int, title: str, database_id: str) -> int:
+        """Creates a new chat session and returns its ID."""
+        insert_query = """
+        INSERT INTO chat_sessions (user_id, title, database_id)
+        VALUES (:user_id, :title, :database_id)
+        RETURNING id;
+        """
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(insert_query), {
+                "user_id": user_id,
+                "title": title.strip(),
+                "database_id": database_id
+            })
+            row = result.fetchone()
+            if row:
+                return row[0]
+            # Fallback
+            select_query = "SELECT MAX(id) as max_id FROM chat_sessions WHERE user_id = :user_id;"
+            res = await self.db_manager.execute_query(select_query, {"user_id": user_id})
+            return res[0]["max_id"] if res else 1
+
+    async def get_chat_sessions(self, user_id: int, database_id: str) -> List[Dict[str, Any]]:
+        """Returns all chat sessions for a specific user and database."""
+        query = """
+        SELECT id, title, database_id, created_at 
+        FROM chat_sessions 
+        WHERE user_id = :user_id AND database_id = :database_id 
+        ORDER BY id DESC;
+        """
+        return await self.db_manager.execute_query(query, {"user_id": user_id, "database_id": database_id})
+
+    async def delete_chat_session(self, session_id: int, user_id: int) -> bool:
+        """Deletes a chat session belonging to a user."""
+        query = "DELETE FROM chat_sessions WHERE id = :session_id AND user_id = :user_id;"
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(query), {"session_id": session_id, "user_id": user_id})
+            return result.rowcount > 0
+
+    async def create_chat_message(
+        self,
+        session_id: int,
+        user_query: str,
+        generated_sql: Optional[str],
+        query_results: Optional[str],
+        execution_error: Optional[str],
+        retry_count: int,
+        narrative_response: Optional[str]
+    ) -> int:
+        """Creates a new chat message in a session."""
+        insert_query = """
+        INSERT INTO chat_messages (
+            session_id, user_query, generated_sql, query_results, 
+            execution_error, retry_count, narrative_response
+        )
+        VALUES (
+            :session_id, :user_query, :generated_sql, :query_results, 
+            :execution_error, :retry_count, :narrative_response
+        )
+        RETURNING id;
+        """
+        params = {
+            "session_id": session_id,
+            "user_query": user_query,
+            "generated_sql": generated_sql or "",
+            "query_results": query_results or "[]",
+            "execution_error": execution_error or "",
+            "retry_count": retry_count,
+            "narrative_response": narrative_response or ""
+        }
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(insert_query), params)
+            row = result.fetchone()
+            if row:
+                return row[0]
+            # Fallback
+            select_query = "SELECT MAX(id) as max_id FROM chat_messages WHERE session_id = :session_id;"
+            res = await self.db_manager.execute_query(select_query, {"session_id": session_id})
+            return res[0]["max_id"] if res else 1
+
+    async def get_chat_messages(self, session_id: int) -> List[Dict[str, Any]]:
+        """Returns all chat messages inside a session ordered chronologically."""
+        query = """
+        SELECT id, session_id, user_query, generated_sql, query_results, 
+               execution_error, retry_count, narrative_response, created_at 
+        FROM chat_messages 
+        WHERE session_id = :session_id 
+        ORDER BY id ASC;
+        """
+        return await self.db_manager.execute_query(query, {"session_id": session_id})
+
+    async def update_chat_session_title(self, session_id: int, user_id: int, title: str) -> bool:
+        """Updates the title of a chat session."""
+        query = "UPDATE chat_sessions SET title = :title WHERE id = :session_id AND user_id = :user_id;"
+        async with self.db_manager.engine.begin() as conn:
+            result = await conn.execute(text(query), {"title": title.strip(), "session_id": session_id, "user_id": user_id})
+            return result.rowcount > 0
 
     async def close(self):
         await self.db_manager.close()

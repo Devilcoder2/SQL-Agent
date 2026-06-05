@@ -1,14 +1,95 @@
 import time
+import json
 from typing import List, Dict, Any, Optional, Set
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException, Depends, Form
 from app.agents.sql_agent import agent_executor, db_manager, vector_store
-from app.core.auth import get_current_user, get_active_db
+from app.core.auth import get_current_user, get_active_db, auth_db
 from app.core.database import get_db_manager
 from app.core.audit import audit_manager
-from app.api.schemas import QueryRequest, QueryResponse, GlossaryTermRequest
+from app.api.schemas import QueryRequest, QueryResponse, GlossaryTermRequest, CreateChatSessionRequest
 
 router = APIRouter(tags=["Query & Metadata"])
+
+@router.get("/api/v1/chats")
+async def get_chats(
+    current_user: dict = Depends(get_current_user),
+    active_db: dict = Depends(get_active_db)
+):
+    try:
+        sessions = await auth_db.get_chat_sessions(current_user["id"], active_db["id"])
+        return {"chats": sessions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch chats: {str(e)}")
+
+@router.post("/api/v1/chats")
+async def create_chat(
+    request: CreateChatSessionRequest,
+    current_user: dict = Depends(get_current_user),
+    active_db: dict = Depends(get_active_db)
+):
+    try:
+        session_id = await auth_db.create_chat_session(
+            user_id=current_user["id"],
+            title=request.title or "New Chat",
+            database_id=active_db["id"]
+        )
+        return {"id": session_id, "title": request.title or "New Chat", "database_id": active_db["id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create chat: {str(e)}")
+
+@router.delete("/api/v1/chats/{session_id}")
+async def delete_chat(
+    session_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        success = await auth_db.delete_chat_session(session_id, current_user["id"])
+        if not success:
+            raise HTTPException(status_code=404, detail="Chat session not found or not owned by user.")
+        return {"status": "success", "message": "Chat session deleted successfully."}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete chat: {str(e)}")
+
+@router.get("/api/v1/chats/{session_id}/messages")
+async def get_chat_messages(
+    session_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        check_query = "SELECT database_id FROM chat_sessions WHERE id = :session_id AND user_id = :user_id;"
+        rows = await auth_db.db_manager.execute_query(check_query, {"session_id": session_id, "user_id": current_user["id"]})
+        if not rows:
+            raise HTTPException(status_code=404, detail="Chat session not found or access denied.")
+            
+        messages = await auth_db.get_chat_messages(session_id)
+        
+        formatted_messages = []
+        for msg in messages:
+            results = []
+            if msg.get("query_results"):
+                try:
+                    results = json.loads(msg["query_results"])
+                except Exception:
+                    results = []
+            formatted_messages.append({
+                "id": msg["id"],
+                "session_id": msg["session_id"],
+                "user_query": msg["user_query"],
+                "generated_sql": msg["generated_sql"],
+                "query_results": results,
+                "execution_error": msg["execution_error"],
+                "retry_count": msg["retry_count"],
+                "narrative_response": msg["narrative_response"],
+                "created_at": msg["created_at"]
+            })
+        return {"messages": formatted_messages}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch messages: {str(e)}")
 
 @router.post("/api/v1/query", response_model=QueryResponse)
 async def run_query(
@@ -17,6 +98,23 @@ async def run_query(
     active_db: dict = Depends(get_active_db)
 ):
     start_time = time.time()
+    
+    # Resolve or create a chat session
+    session_id = request.session_id
+    if session_id:
+        check_query = "SELECT database_id FROM chat_sessions WHERE id = :session_id AND user_id = :user_id;"
+        rows = await auth_db.db_manager.execute_query(check_query, {"session_id": session_id, "user_id": current_user["id"]})
+        if not rows:
+            raise HTTPException(status_code=404, detail="Chat session not found or access denied.")
+        if rows[0]["database_id"] != active_db["id"]:
+            raise HTTPException(status_code=400, detail="Chat session belongs to a different database.")
+    else:
+        session_id = await auth_db.create_chat_session(
+            user_id=current_user["id"],
+            title="New Chat",
+            database_id=active_db["id"]
+        )
+
     inputs = {
         "user_query": request.query,
         "user_role": current_user["role"],
@@ -57,6 +155,33 @@ async def run_query(
             latency_ms=latency
         )
         
+        # Check and update session title if it is default
+        title_query = "SELECT title FROM chat_sessions WHERE id = :session_id;"
+        title_rows = await auth_db.db_manager.execute_query(title_query, {"session_id": session_id})
+        if title_rows and title_rows[0]["title"] == "New Chat":
+            new_title = request.query[:50]
+            if len(request.query) > 50:
+                new_title += "..."
+            await auth_db.update_chat_session_title(session_id, current_user["id"], new_title)
+
+        # Save successful/blocked/failed query logs into chat messages
+        results_str = "[]"
+        if final_state.get("query_results") is not None:
+            try:
+                results_str = json.dumps(final_state["query_results"])
+            except Exception:
+                results_str = "[]"
+
+        await auth_db.create_chat_message(
+            session_id=session_id,
+            user_query=request.query,
+            generated_sql=final_state.get("generated_sql"),
+            query_results=results_str,
+            execution_error=final_state.get("execution_error"),
+            retry_count=final_state.get("retry_count", 0),
+            narrative_response=final_state.get("narrative_response") or ""
+        )
+        
         return QueryResponse(
             user_query=final_state["user_query"],
             user_role=final_state["user_role"],
@@ -65,7 +190,8 @@ async def run_query(
             query_results=final_state["query_results"],
             execution_error=final_state["execution_error"],
             retry_count=final_state["retry_count"],
-            narrative_response=final_state["narrative_response"] or ""
+            narrative_response=final_state["narrative_response"] or "",
+            session_id=session_id
         )
     except Exception as e:
         latency = int((time.time() - start_time) * 1000)
@@ -77,6 +203,21 @@ async def run_query(
             error_message=str(e),
             latency_ms=latency
         )
+        
+        # Log exception failure in chat messages
+        try:
+            await auth_db.create_chat_message(
+                session_id=session_id,
+                user_query=request.query,
+                generated_sql=None,
+                query_results="[]",
+                execution_error=str(e),
+                retry_count=0,
+                narrative_response="System Execution Error"
+            )
+        except Exception:
+            pass
+            
         raise HTTPException(status_code=500, detail=f"Agent execution error: {str(e)}")
 
 @router.get("/api/v1/tables")

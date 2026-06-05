@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 class QueryRequest(BaseModel):
     query: str
     role: str = "general"
+    session_id: Optional[int] = None
 
 class QueryResponse(BaseModel):
     user_query: str
@@ -15,6 +16,10 @@ class QueryResponse(BaseModel):
     execution_error: Optional[str]
     retry_count: int
     narrative_response: str
+    session_id: Optional[int] = None
+
+class CreateChatSessionRequest(BaseModel):
+    title: Optional[str] = "New Chat"
 
 class RegisterEnterpriseRequest(BaseModel):
     enterprise_name: str

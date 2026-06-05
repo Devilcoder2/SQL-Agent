@@ -149,6 +149,8 @@ export default function Workspace({ setView }) {
               onQuerySuccess={handleQuerySuccess}
               generatedSql={generatedSql}
               narrativeResponse={narrativeResponse}
+              activeDatabaseId={activeDatabaseId}
+              setWorkspaceTab={setWorkspaceTab}
             />
           )}
 
