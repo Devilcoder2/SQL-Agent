@@ -8,6 +8,7 @@ import SchemaTab from './workspace/SchemaTab';
 import WarRoomTab from './workspace/WarRoomTab';
 import AlertsTab from './workspace/AlertsTab';
 import UsersTab from './workspace/UsersTab';
+import DatabasesTab from './workspace/DatabasesTab';
 
 export default function Workspace({ setView }) {
   // Navigation State
@@ -171,6 +172,20 @@ export default function Workspace({ setView }) {
           {/* VIEW F: Users Dashboard Tab */}
           {workspaceTab === 'users' && user?.role === 'admin' && (
             <UsersTab fetch={fetchWrapper} user={user} />
+          )}
+
+          {/* VIEW G: Databases Dashboard Tab */}
+          {workspaceTab === 'databases' && user?.role === 'admin' && (
+            <DatabasesTab 
+              fetch={fetchWrapper} 
+              activeDatabaseId={activeDatabaseId} 
+              setActiveDatabaseId={(id) => {
+                localStorage.setItem("activeDatabaseId", id);
+                setActiveDatabaseId(id);
+              }}
+              databases={databases}
+              fetchDatabases={fetchDatabases}
+            />
           )}
 
         </div>

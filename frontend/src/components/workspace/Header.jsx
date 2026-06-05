@@ -98,7 +98,7 @@ export default function Header({
     }
   };
 
-  const canManageDbs = user?.role === 'admin' || user?.tenant_type === 'single';
+  const canManageDbs = user?.role === 'admin';
 
   return (
     <>
@@ -111,6 +111,7 @@ export default function Header({
             {workspaceTab === 'warroom' && '🤝 Collaborative War Room'}
             {workspaceTab === 'alerts' && '🔔 Smoke Detector Alerts'}
             {workspaceTab === 'users' && '👥 Enterprise Users Dashboard'}
+            {workspaceTab === 'databases' && '🗄️ Database Connections Management'}
           </span>
         </div>
 

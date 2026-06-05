@@ -80,18 +80,33 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
           </button>
 
           {user?.role === 'admin' && (
-            <button
-              onClick={() => setWorkspaceTab('users')}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
-                workspaceTab === 'users'
-                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
-                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
-              }`}
-              title="Users Dashboard"
-            >
-              <span className="material-symbols-outlined text-[22px]">group</span>
-              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Users</span>
-            </button>
+            <>
+              <button
+                onClick={() => setWorkspaceTab('users')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                  workspaceTab === 'users'
+                    ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                    : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+                }`}
+                title="Users Dashboard"
+              >
+                <span className="material-symbols-outlined text-[22px]">group</span>
+                <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Users</span>
+              </button>
+
+              <button
+                onClick={() => setWorkspaceTab('databases')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                  workspaceTab === 'databases'
+                    ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                    : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+                }`}
+                title="Database Connections"
+              >
+                <span className="material-symbols-outlined text-[22px]">database</span>
+                <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Databases</span>
+              </button>
+            </>
           )}
         </div>
       </div>
