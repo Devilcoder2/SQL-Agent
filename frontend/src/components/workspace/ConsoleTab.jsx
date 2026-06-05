@@ -679,20 +679,6 @@ export default function ConsoleTab({
             </div>
 
             <div className="flex gap-2 shrink-0">
-              {/* Role selection dropdown */}
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131b2e] border border-white/5 rounded-xl">
-                <span className="material-symbols-outlined text-xs text-[#c3c6d7]">person</span>
-                <select
-                  value={role}
-                  onChange={e => setRole(e.target.value)}
-                  className="bg-transparent border-none focus:ring-0 text-[11px] font-bold uppercase tracking-wider outline-none text-[#dae2fd] cursor-pointer"
-                >
-                  <option className="bg-[#0b1326] text-white" value="general">Role: General</option>
-                  <option className="bg-[#0b1326] text-white" value="analyst">Role: Analyst</option>
-                  <option className="bg-[#0b1326] text-white" value="admin">Role: Admin</option>
-                </select>
-              </div>
-
               {/* Execute Button */}
               <button
                 onClick={() => executeQueryDirectly(query)}
