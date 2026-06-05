@@ -126,3 +126,9 @@
   animation: marquee 30s linear infinite;
 }
 
+.dotted-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+

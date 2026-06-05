@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 export default function Workspace({ setView }) {
+  // Navigation State: 'console' | 'studio' | 'schema' | 'warroom'
+  const [workspaceTab, setWorkspaceTab] = useState("console");
+
   // State variables
   const [query, setQuery] = useState("Who are the top 3 support representatives based on total customer sales?");
   const [role, setRole] = useState("general");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [activeTab, setActiveTab] = useState("results");
   
   // Database Introspection State
   const [tables, setTables] = useState([]);
@@ -26,52 +28,64 @@ export default function Workspace({ setView }) {
   const [executionError, setExecutionError] = useState(null);
   const [narrativeResponse, setNarrativeResponse] = useState("");
 
+  // Search Results Table Filter
+  const [studioSearch, setStudioSearch] = useState("");
+
   // Refs and hooks
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const thoughtLogsEndRef = useRef(null);
 
-  // Multiplayer cursor state simulation
-  const [remoteCursorPos, setRemoteCursorPos] = useState({ top: '150px', left: '350px' });
+  // Multiplayer cursor state simulation for War Room
+  const [cursors, setCursors] = useState([
+    { id: 1, name: "Sarah (Data Analyst)", x: 220, y: 150, color: "#ff9e80" },
+    { id: 2, name: "Mark (VP Product)", x: 620, y: 310, color: "#80ffff" }
+  ]);
 
-  // On mount: fetch tables and run cursor simulation
+  // On mount: fetch tables and initialize cursor path cycles
   useEffect(() => {
     fetchTables();
 
-    // Cursor animation loop
-    const points = [
-      { top: '120px', left: '340px' },
-      { top: '250px', left: '680px' },
-      { top: '420px', left: '820px' },
-      { top: '140px', left: '550px' },
-      { top: '360px', left: '410px' }
-    ];
-    let pointIdx = 0;
+    // Cursor movement timeline
     const interval = setInterval(() => {
-      setRemoteCursorPos(points[pointIdx]);
-      pointIdx = (pointIdx + 1) % points.length;
-    }, 5000);
+      setCursors(prev => prev.map(c => {
+        const angle = Date.now() * 0.001 * (c.id === 1 ? 1 : -0.8);
+        const radius = c.id === 1 ? 80 : 120;
+        const centerX = c.id === 1 ? 300 : 700;
+        const centerY = c.id === 1 ? 200 : 250;
+        return {
+          ...c,
+          x: Math.round(centerX + Math.cos(angle) * radius),
+          y: Math.round(centerY + Math.sin(angle) * radius * 0.5)
+        };
+      }));
+    }, 100);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Scroll to bottom of agent logs whenever they update
+  // Scroll logs to bottom
   useEffect(() => {
     if (thoughtLogsEndRef.current) {
       thoughtLogsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs]);
 
-  // Re-plot chart whenever query results change
+  // Re-plot chart when results or tab changes
   useEffect(() => {
-    renderChart();
+    if (workspaceTab === "studio" && queryResults) {
+      const timer = setTimeout(() => {
+        renderChart();
+      }, 80);
+      return () => clearTimeout(timer);
+    }
     return () => {
       if (chartInstance.current) {
         chartInstance.current.destroy();
         chartInstance.current = null;
       }
     };
-  }, [queryResults]);
+  }, [queryResults, workspaceTab]);
 
   // --- API Handlers ---
   const fetchTables = async () => {
@@ -151,18 +165,16 @@ export default function Workspace({ setView }) {
     setQueryResults(null);
     setExecutionError(null);
     setNarrativeResponse("");
-    setSecurityStatus("Processing...");
-    setActiveTab("results");
+    setSecurityStatus("Checking AST...");
 
-    logMessage("Semantic Context: Searching ChromaDB for schema mappings...", "info");
+    logMessage("Semantic Context: Searching vector index for keyword resolutions...", "info");
 
     try {
-      // Simulate multi-turn agent latency
-      await new Promise(r => setTimeout(r, 600));
-      logMessage("Table Selection: Resolved relevant tables based on vector search context.", "success");
+      await new Promise(r => setTimeout(r, 400));
+      logMessage("Schema Introspection: Isolating relevant tables for query generation...", "success");
 
-      await new Promise(r => setTimeout(r, 650));
-      logMessage("SQL Synthesizer: Translating intent to SQLite dialect query using Gemini 3.5...", "info");
+      await new Promise(r => setTimeout(r, 400));
+      logMessage("SQL Compiler: Translating prompt with Gemini engine...", "info");
 
       const response = await fetch("/api/v1/query", {
         method: "POST",
@@ -180,8 +192,8 @@ export default function Workspace({ setView }) {
 
       // Handle security blocks
       if (data.execution_error && data.execution_error.includes("Security Exception")) {
-        logMessage(`AST Guardrail: Destructive command detected! Intercepting execution.`, "security");
-        logMessage(`Security Alert: Execution Blocked. ${data.execution_error}`, "error");
+        logMessage(`AST Guardrail: Destination table modified or metadata query blocked!`, "security");
+        logMessage(`Security Intercept: ${data.execution_error}`, "error");
         setSecurityStatus("BLOCKED");
         setExecutionError(data.execution_error);
         return;
@@ -189,23 +201,23 @@ export default function Workspace({ setView }) {
 
       // Handle raw syntax execution errors
       if (data.execution_error) {
-        logMessage(`DB Engine: Query returned execution error.`, "error");
-        logMessage(`Error Trace: ${data.execution_error}`, "error");
+        logMessage(`SQLite Engine: SQL returned compile failure traceback.`, "error");
+        logMessage(`Traceback details: ${data.execution_error}`, "error");
         setSecurityStatus("FAILED");
         setExecutionError(data.execution_error);
         return;
       }
 
       // Query succeeded
-      logMessage("AST Guardrail: Statement approved. Only read-only query structures present.", "success");
-      logMessage(`Database Engine: Query completed successfully. Fetching dataset...`, "success");
+      logMessage("AST Guardrail: Statement check passed. Verified safe read-only syntax.", "success");
+      logMessage(`Database Gateway: Query completed successfully. Formatting dataset...`, "success");
 
       setSecurityStatus("VERIFIED SELECT");
       setQueryResults(data.query_results);
       setNarrativeResponse(data.narrative_response);
 
     } catch (err) {
-      logMessage(`System Failure: ${err.message}`, "error");
+      logMessage(`System Exception: ${err.message}`, "error");
       setSecurityStatus("SYSTEM ERROR");
       setExecutionError(err.message);
     } finally {
@@ -215,7 +227,7 @@ export default function Workspace({ setView }) {
 
   // --- SQL Syntax Highlighting Engine ---
   const renderHighlightedSQL = (sqlText) => {
-    if (!sqlText) return <span className="text-on-surface-variant/50 italic">-- Generated safe SQL statement will be highlighted here --</span>;
+    if (!sqlText) return <span className="text-on-surface-variant/40 italic">-- Compiled query statements will be displayed here --</span>;
     
     let escaped = sqlText
       .replace(/&/g, "&amp;")
@@ -244,7 +256,7 @@ export default function Workspace({ setView }) {
     return <span dangerouslySetInnerHTML={{ __html: escaped }} />;
   };
 
-  // --- Dynamic Visual Chart.js Engine ---
+  // --- Chart.js Rendering Engine ---
   const renderChart = () => {
     if (chartInstance.current) {
       chartInstance.current.destroy();
@@ -281,7 +293,7 @@ export default function Workspace({ setView }) {
       }
     }
 
-    if (!valueKey) return; // No numbers to chart
+    if (!valueKey) return; // No numerical fields to plot
 
     const labels = queryResults.map(row => row[labelKey]);
     const values = queryResults.map(row => {
@@ -290,9 +302,9 @@ export default function Workspace({ setView }) {
     });
 
     const ctx = chartRef.current.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, "rgba(37, 99, 235, 0.6)");
-    gradient.addColorStop(1, "rgba(78, 222, 163, 0.15)");
+    const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+    gradient.addColorStop(0, "rgba(180, 197, 255, 0.4)");
+    gradient.addColorStop(1, "rgba(78, 222, 163, 0.05)");
 
     chartInstance.current = new Chart(ctx, {
       type: "bar",
@@ -303,9 +315,9 @@ export default function Workspace({ setView }) {
           data: values,
           backgroundColor: gradient,
           borderColor: "#b4c5ff",
-          borderWidth: 1,
-          borderRadius: 4,
-          hoverBackgroundColor: "rgba(180, 197, 255, 0.8)"
+          borderWidth: 1.5,
+          borderRadius: 6,
+          hoverBackgroundColor: "rgba(180, 197, 255, 0.7)"
         }]
       },
       options: {
@@ -319,11 +331,11 @@ export default function Workspace({ setView }) {
         },
         scales: {
           x: {
-            grid: { color: "rgba(255, 255, 255, 0.05)" },
+            grid: { color: "rgba(255, 255, 255, 0.03)" },
             ticks: { color: "#c3c6d7", font: { family: "Inter", size: 9 } }
           },
           y: {
-            grid: { color: "rgba(255, 255, 255, 0.05)" },
+            grid: { color: "rgba(255, 255, 255, 0.03)" },
             ticks: { color: "#c3c6d7", font: { family: "Inter", size: 9 } }
           }
         }
@@ -334,383 +346,622 @@ export default function Workspace({ setView }) {
   const handleCopySql = () => {
     if (!generatedSql) return;
     navigator.clipboard.writeText(generatedSql).then(() => {
-      alert("SQL query copied to clipboard!");
+      alert("SQL code copied to clipboard!");
     });
   };
 
+  const handleDownloadCSV = () => {
+    if (!queryResults || queryResults.length === 0) return;
+    const headers = Object.keys(queryResults[0]).join(",");
+    const rows = queryResults.map(row => 
+      Object.values(row).map(val => {
+        const text = String(val === null ? 'NULL' : val);
+        return text.includes(',') ? `"${text}"` : text;
+      }).join(",")
+    );
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `sql_agent_result_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Filter studio dataset based on query results
+  const filteredResults = queryResults?.filter(row => 
+    Object.values(row).some(val => 
+      String(val).toLowerCase().includes(studioSearch.toLowerCase())
+    )
+  ) || [];
+
   return (
-    <div className="h-screen flex flex-col bg-[#020617] text-[#dae2fd] overflow-hidden">
-      {/* TopNavBar */}
-      <nav className="w-full z-50 bg-[#0b1326]/80 backdrop-blur-xl border-b border-white/5 flex justify-between items-center px-margin-desktop h-16 shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setView('landing')} className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#b4c5ff] to-[#4edea3] flex items-center justify-center cursor-pointer border-none">
-            <span className="material-symbols-outlined text-[#020617] font-bold text-lg">terminal</span>
-          </button>
-          <span className="font-headline-md text-headline-md font-bold text-on-surface">Enterprise AI SQL Agent Workspace</span>
-        </div>
-        <div className="flex items-center gap-lg">
-          <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded bg-[#131b2e] border border-white/5">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#4edea3] animate-pulse"></span>
-            <span>Active Connection: <code className="text-[#4edea3]">chinook.db</code></span>
-          </div>
-          <button onClick={() => setView('landing')} className="text-xs font-semibold text-on-surface-variant hover:text-white transition-colors bg-transparent border-none cursor-pointer">
-            Exit Workspace
-          </button>
-        </div>
-      </nav>
-
-      <div className="flex flex-row flex-grow overflow-hidden relative">
-        {/* Collaboration Cursor Layer */}
-        <div id="cursor-layer" className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
-          <div 
-            id="remote-cursor" 
-            className="collab-cursor flex flex-col items-start absolute" 
-            style={{ 
-              top: remoteCursorPos.top, 
-              left: remoteCursorPos.left,
-              transition: 'all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1)' 
-            }}
+    <div className="h-screen w-screen flex bg-[#020617] text-[#dae2fd] overflow-hidden select-none font-sans">
+      
+      {/* 1. Left Slim Navigation Sidebar */}
+      <aside className="w-20 bg-[#0b1326]/60 border-r border-white/5 flex flex-col justify-between items-center py-6 shrink-0 z-20">
+        <div className="flex flex-col items-center gap-6 w-full">
+          {/* Brand Logo CTA */}
+          <button 
+            onClick={() => setView('landing')} 
+            className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary to-secondary flex items-center justify-center cursor-pointer shadow-lg shadow-primary/15 border-none hover:scale-105 active:scale-95 transition-all"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4.5 3V19.5L10.5 13.5H19.5L4.5 3Z" fill="#ffb4ab" stroke="white" strokeWidth="1.5"/>
-            </svg>
-            <div className="bg-[#ffb4ab] text-[#690005] text-[10px] font-bold px-1.5 py-0.5 rounded shadow mt-1 whitespace-nowrap">
-              Sarah (Senior Analyst)
-            </div>
-          </div>
-        </div>
+            <span className="material-symbols-outlined text-[#020617] font-extrabold text-xl">terminal</span>
+          </button>
+          
+          {/* Tab Navigation List */}
+          <div className="flex flex-col gap-3 w-full px-2 mt-4">
+            <button
+              onClick={() => setWorkspaceTab('console')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'console'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="AI Agent Console"
+            >
+              <span className="material-symbols-outlined text-[22px]">forum</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Console</span>
+            </button>
 
-        {/* Left Sidebar: Schema Explorer & Glossary */}
-        <aside className="w-[290px] bg-[#060e20]/50 border-r border-white/5 flex flex-col p-md space-y-4 shrink-0 overflow-y-auto custom-scrollbar">
-          <div className="flex items-center justify-between pb-sm border-b border-white/5">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-md">schema</span>
-              <h3 class="font-label-sm text-label-sm text-primary uppercase tracking-wider">Schema Explorer</h3>
-            </div>
-            <button onClick={fetchTables} className="text-on-surface-variant hover:text-white transition-colors active:scale-95 bg-transparent border-none">
-              <span className="material-symbols-outlined text-sm">sync</span>
+            <button
+              onClick={() => setWorkspaceTab('studio')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'studio'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="Data Studio"
+            >
+              <span className="material-symbols-outlined text-[22px]">analytics</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Studio</span>
+            </button>
+
+            <button
+              onClick={() => setWorkspaceTab('schema')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'schema'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="Schema Explorer"
+            >
+              <span className="material-symbols-outlined text-[22px]">schema</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">Schema</span>
+            </button>
+
+            <button
+              onClick={() => setWorkspaceTab('warroom')}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer border-none transition-all duration-200 group ${
+                workspaceTab === 'warroom'
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-md shadow-primary/5'
+                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
+              }`}
+              title="War Room Canvas"
+            >
+              <span className="material-symbols-outlined text-[22px]">group</span>
+              <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">War Room</span>
             </button>
           </div>
+        </div>
 
-          {/* Table accordion list */}
-          <div className="flex-grow space-y-2 overflow-y-auto custom-scrollbar min-h-[200px]">
-            {tables.length === 0 ? (
-              <div className="text-xs text-on-surface-variant/40 italic text-center py-4">No tables found.</div>
-            ) : (
-              tables.map(table => {
-                const isExpanded = expandedTables.has(table);
-                const schema = tableSchemas[table];
-                return (
-                  <div key={table} className="border border-white/5 bg-[#131b2e]/30 rounded-lg overflow-hidden">
-                    <div 
-                      onClick={() => toggleTableExpand(table)}
-                      className="flex items-center justify-between p-2.5 hover:bg-surface-container-high/50 cursor-pointer duration-150 select-none"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[16px] text-secondary">table_chart</span>
-                        <span className="text-xs font-semibold text-on-surface">{table}</span>
-                      </div>
-                      <span 
-                        className="material-symbols-outlined text-[16px] text-on-surface-variant/60 transition-transform"
-                        style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-                      >
-                        chevron_right
-                      </span>
-                    </div>
+        {/* Exit Icon */}
+        <button
+          onClick={() => setView('landing')}
+          className="p-3 text-on-surface-variant hover:text-red-400 transition-colors cursor-pointer bg-transparent border-none"
+          title="Exit Workspace"
+        >
+          <span className="material-symbols-outlined text-[22px]">logout</span>
+        </button>
+      </aside>
 
-                    {isExpanded && (
-                      <div className="bg-[#060e20] border-t border-white/5 p-2 space-y-1.5 text-[11px] font-mono">
-                        {!schema ? (
-                          <div className="text-[10px] text-on-surface-variant/50 italic px-2">Loading columns...</div>
-                        ) : (
-                          schema.columns.map(col => {
-                            const isPK = col.primary_key;
-                            const fk = schema.foreign_keys.find(f => f.constrained_columns.includes(col.name));
-                            return (
-                              <div key={col.name} className="flex items-center px-2 py-0.5 hover:bg-white/5 rounded">
-                                <span className="text-[#c3c6d7]">{col.name}</span>
-                                <span className="text-[9px] text-[#c3c6d7]/40 ml-1.5 font-sans">{col.type}</span>
-                                {isPK && <span className="text-[#4edea3] text-[10px] ml-auto font-sans font-semibold">🔑 PK</span>}
-                                {fk && <span className="text-[#b4c5ff] text-[10px] ml-auto font-sans font-semibold cursor-help" title={`References ${fk.referred_table}`}>🔗 FK</span>}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+      {/* 2. Main Workspace Layout */}
+      <div className="flex-grow flex flex-col overflow-hidden relative">
+        
+        {/* Workspace Top Header Bar */}
+        <header className="w-full h-16 bg-[#0b1326]/40 border-b border-white/5 flex justify-between items-center px-6 shrink-0 z-10">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold uppercase tracking-wider text-white">
+              {workspaceTab === 'console' && '💬 Agent Chat Console'}
+              {workspaceTab === 'studio' && '📊 Data Studio Visuals'}
+              {workspaceTab === 'schema' && '🗄️ Database Introspection'}
+              {workspaceTab === 'warroom' && '🤝 Collaborative War Room'}
+            </span>
           </div>
 
-          {/* Glossary panel */}
-          <div className="pt-sm border-t border-white/5 flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-[#d0bcff] text-md">book_2</span>
-              <h3 className="font-label-sm text-label-sm text-[#d0bcff] uppercase tracking-wider">Semantic Glossary</h3>
-            </div>
-            <div className="glass-panel p-md rounded-lg flex flex-col gap-2 bg-[#131b2e]/45">
-              <input 
-                type="text" 
-                placeholder="Term (e.g. sales)" 
-                value={gTerm}
-                onChange={e => setGTerm(e.target.value)}
-                className="w-full bg-[#060e20] border border-white/5 rounded text-xs px-2 py-1.5 focus:border-[#b4c5ff] focus:ring-0 text-white placeholder:text-[#c3c6d7]/40"
-              />
-              <input 
-                type="text" 
-                placeholder="Business explanation" 
-                value={gDef}
-                onChange={e => setGDef(e.target.value)}
-                className="w-full bg-[#060e20] border border-white/5 rounded text-xs px-2 py-1.5 focus:border-[#b4c5ff] focus:ring-0 text-white placeholder:text-[#c3c6d7]/40"
-              />
-              <input 
-                type="text" 
-                placeholder="SQL Constraint (Invoice.Total)" 
-                value={gSql}
-                onChange={e => setGSql(e.target.value)}
-                className="w-full bg-[#060e20] border border-white/5 rounded text-xs px-2 py-1.5 focus:border-[#b4c5ff] focus:ring-0 text-white placeholder:text-[#c3c6d7]/40"
-              />
-              <button 
-                onClick={registerGlossary}
-                disabled={isRegisteringGlossary}
-                className="w-full bg-[#b4c5ff]/10 border border-[#b4c5ff]/20 text-[#b4c5ff] py-1.5 rounded text-xs font-bold hover:bg-[#b4c5ff]/25 transition-colors active:scale-95 cursor-pointer"
-              >
-                {isRegisteringGlossary ? 'Registering...' : 'Register Glossary Term'}
-              </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#131b2e] border border-white/5 select-none">
+              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+              <span>sqlite: <code className="text-secondary font-mono">chinook.db</code></span>
             </div>
           </div>
-        </aside>
+        </header>
 
-        {/* Main Panel */}
-        <main className="flex-grow flex flex-col overflow-hidden px-lg py-md space-y-md">
+        {/* Workspace Active Views Render Window */}
+        <div className="flex-grow p-6 overflow-hidden bg-[#020617]">
           
-          {/* NLP bar & execute */}
-          <section className="w-full shrink-0">
-            <div className="flex flex-col md:flex-row gap-sm items-stretch">
-              <div className="relative group flex-grow">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-[#b4c5ff] to-[#4edea3] rounded-xl blur opacity-15 group-focus-within:opacity-30 transition duration-300"></div>
-                <div className="relative glass-panel rounded-xl p-xs flex items-center px-md">
-                  <span className="material-symbols-outlined text-[#b4c5ff] text-[24px] mr-3">psychology</span>
-                  <input 
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleExecuteQuery()}
-                    className="w-full bg-transparent border-none focus:ring-0 text-sm font-medium placeholder:text-[#c3c6d7]/40 py-2.5 text-white" 
-                    placeholder="Ask database anything..." 
-                    type="text"
-                  />
-                </div>
-              </div>
+          {/* VIEW A: Agent Console tab */}
+          {workspaceTab === 'console' && (
+            <div className="h-full w-full grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
               
-              <div class="flex flex-row gap-sm shrink-0 items-center justify-end">
-                <div className="flex items-center gap-1.5 px-3 py-2 bg-[#131b2e] border border-white/5 rounded-xl h-full">
-                  <span className="material-symbols-outlined text-xs text-[#c3c6d7]">person</span>
-                  <select 
-                    value={role}
-                    onChange={e => setRole(e.target.value)}
-                    className="bg-transparent border-none focus:ring-0 text-xs font-semibold py-0 pl-1 pr-6 text-[#dae2fd]"
-                  >
-                    <option class="bg-[#0b1326] text-white" value="general">Role: General Staff</option>
-                    <option class="bg-[#0b1326] text-white" value="analyst">Role: Business Analyst</option>
-                    <option class="bg-[#0b1326] text-white" value="admin">Role: Admin Clearance</option>
-                  </select>
+              {/* Left Pane: Scrolling agent thought logs */}
+              <div className="glass-card rounded-2xl flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">psychology</span>
+                    LangGraph Thought Stream
+                  </h3>
+                  {isExecuting && <span className="material-symbols-outlined text-secondary animate-spin text-sm">sync</span>}
                 </div>
                 
-                <button 
-                  onClick={handleExecuteQuery}
-                  disabled={isExecuting}
-                  className="bg-gradient-to-r from-[#b4c5ff] to-[#4edea3] text-[#002a78] font-bold px-6 rounded-xl flex items-center gap-2 hover:shadow-[0_0_15px_rgba(180,197,255,0.2)] active:scale-95 transition-all duration-150 h-full cursor-pointer border-none"
-                >
-                  <span>Execute</span>
-                  <span className="material-symbols-outlined text-[16px] font-bold">bolt</span>
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Middle Bento Row */}
-          <section className="grid grid-cols-12 gap-gutter h-[220px] shrink-0">
-            {/* Logs Panel */}
-            <div className="col-span-12 lg:col-span-5 glass-panel rounded-xl p-md flex flex-col overflow-hidden h-full">
-              <div className="flex items-center justify-between pb-sm border-b border-white/5">
-                <h3 className="font-label-sm text-label-sm text-[#4edea3] uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">settings_suggest</span>
-                  Agent Execution Logs
-                </h3>
-                {isExecuting && <span className="material-symbols-outlined text-[#4edea3] animate-spin text-sm">sync</span>}
-              </div>
-              <div className="flex-grow overflow-y-auto space-y-2.5 py-sm custom-scrollbar text-xs">
-                {logs.length === 0 ? (
-                  <div className="text-[#c3c6d7]/40 italic py-4 text-center">Ready. Submit a question to initiate execution.</div>
-                ) : (
-                  logs.map((log, idx) => {
-                    const iconMap = {
-                      "success": 'check',
-                      "error": 'close',
-                      "security": 'gpp_bad',
-                      "info": 'keyboard_double_arrow_right'
-                    };
-                    const bgMap = {
-                      "success": "bg-[#4edea3]/10 border-[#4edea3]/30 text-[#4edea3]",
-                      "error": "bg-red-400/10 border-red-400/30 text-red-400",
-                      "security": "bg-red-900/20 border-red-900/30 text-red-300",
-                      "info": "bg-[#b4c5ff]/10 border-[#b4c5ff]/30 text-[#b4c5ff]"
-                    };
-                    const iconClass = log.type === "info" ? "animate-pulse" : "";
-                    return (
-                      <div key={idx} className="flex items-start gap-3">
-                        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center border ${bgMap[log.type]} shrink-0`}>
-                          <span className={`material-symbols-outlined text-[14px] ${iconClass}`}>{iconMap[log.type]}</span>
+                {/* Scrolling Logs list */}
+                <div className="flex-grow p-5 overflow-y-auto space-y-4 custom-scrollbar text-xs">
+                  {logs.length === 0 ? (
+                    <div className="text-on-surface-variant/40 italic py-16 text-center select-none">
+                      Ready. Submit a question in the prompt bar below to activate the agent.
+                    </div>
+                  ) : (
+                    logs.map((log, idx) => {
+                      const bgMap = {
+                        success: "bg-secondary/15 border-secondary/20 text-secondary",
+                        error: "bg-red-950/40 border-red-500/20 text-red-400",
+                        security: "bg-red-950/60 border-red-500/25 text-red-300",
+                        info: "bg-primary/10 border-primary/20 text-primary"
+                      };
+                      const iconMap = {
+                        success: "check_circle",
+                        error: "cancel",
+                        security: "gpp_bad",
+                        info: "arrow_right_alt"
+                      };
+                      return (
+                        <div key={idx} className="flex gap-3 items-start animate-fade-in">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${bgMap[log.type]}`}>
+                            <span className="material-symbols-outlined text-[12px]">{iconMap[log.type]}</span>
+                          </div>
+                          <div className="flex-1 text-on-surface text-[13px] leading-relaxed font-medium">
+                            {log.text}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-on-surface font-semibold">{log.text}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={thoughtLogsEndRef} />
-              </div>
-            </div>
-
-            {/* SQL Monaco View */}
-            <div className="col-span-12 lg:col-span-7 glass-panel rounded-xl overflow-hidden flex flex-col h-full">
-              <div className="bg-surface-container-high px-md py-2 flex justify-between items-center border-b border-white/5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[#c3c6d7]">agent_query_compiled.sql</span>
-                  <span 
-                    className={`text-[9px] px-1.5 py-[1px] rounded border font-bold uppercase tracking-wider ${
-                      securityStatus.includes("VERIFIED") ? "bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/25" :
-                      securityStatus.includes("BLOCKED") ? "bg-red-900/20 text-red-400 border-red-900/30" :
-                      "bg-[#b4c5ff]/10 text-[#b4c5ff] border-[#b4c5ff]/25"
-                    }`}
-                  >
-                    {securityStatus}
-                  </span>
+                      );
+                    })
+                  )}
+                  <div ref={thoughtLogsEndRef} />
                 </div>
-                <button onClick={handleCopySql} className="text-[#c3c6d7] hover:text-white transition-colors bg-transparent border-none cursor-pointer">
-                  <span className="material-symbols-outlined text-sm">content_copy</span>
-                </button>
-              </div>
-              <div className="flex-grow p-md monaco-editor overflow-auto custom-scrollbar text-xs">
-                {renderHighlightedSQL(generatedSql)}
-              </div>
-            </div>
-          </section>
 
-          {/* Bottom Bento Row: Results & Narrative Split Pane */}
-          <section className="flex-grow grid grid-cols-12 gap-gutter overflow-hidden min-h-[250px]">
-            {/* Results View */}
-            <div className="col-span-12 lg:col-span-7 glass-panel rounded-xl overflow-hidden flex flex-col h-full">
-              <div className="px-md border-b border-white/5 flex items-center justify-between shrink-0 bg-[#131b2e]/50">
-                <div className="flex gap-md">
-                  <button 
-                    onClick={() => setActiveTab("results")}
-                    className={`font-label-sm text-label-sm py-3 px-1 transition-all border-none bg-transparent cursor-pointer ${activeTab === 'results' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-white'}`}
-                  >
-                    Results Grid
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab("tldr")}
-                    className={`font-label-sm text-label-sm py-3 px-1 transition-all border-none bg-transparent cursor-pointer ${activeTab === 'tldr' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-white'}`}
-                  >
-                    Executive Narrative
-                  </button>
-                </div>
-                <div className="text-[10px] text-[#c3c6d7] font-semibold bg-[#131b2e] border border-white/5 px-2 py-0.5 rounded">
-                  {queryResults ? queryResults.length : 0} Rows
-                </div>
-              </div>
+                {/* Query Input Bar Block */}
+                <div className="p-4 border-t border-white/5 bg-white/[0.01] space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-grow relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-xl blur opacity-10 group-focus-within:opacity-20 transition" />
+                      <div className="relative border border-white/10 rounded-xl px-4 py-1.5 flex items-center bg-[#020617] focus-within:border-primary/50 transition">
+                        <span className="material-symbols-outlined text-primary/60 text-[20px] mr-2">search</span>
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={e => setQuery(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleExecuteQuery()}
+                          className="w-full bg-transparent border-none focus:ring-0 text-sm py-2 placeholder-white/20 text-white outline-none"
+                          placeholder="Search schemas dynamically using natural language..."
+                        />
+                      </div>
+                    </div>
 
-              <div className="flex-grow overflow-auto custom-scrollbar h-full">
-                {activeTab === "results" ? (
-                  <div className="w-full h-full">
-                    {executionError ? (
-                      <div className="text-xs text-red-400 italic py-8 text-center font-semibold">
-                        Security Shield Active: Database operation blocked.<br/>{executionError}
+                    <div className="flex gap-2 shrink-0">
+                      {/* Role selection dropdown */}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131b2e] border border-white/5 rounded-xl">
+                        <span className="material-symbols-outlined text-xs text-[#c3c6d7]">person</span>
+                        <select
+                          value={role}
+                          onChange={e => setRole(e.target.value)}
+                          className="bg-transparent border-none focus:ring-0 text-[11px] font-bold uppercase tracking-wider outline-none text-[#dae2fd] cursor-pointer"
+                        >
+                          <option className="bg-[#0b1326] text-white" value="general">Role: General</option>
+                          <option className="bg-[#0b1326] text-white" value="analyst">Role: Analyst</option>
+                          <option className="bg-[#0b1326] text-white" value="admin">Role: Admin</option>
+                        </select>
                       </div>
-                    ) : !queryResults ? (
-                      <div className="text-xs text-[#c3c6d7]/40 italic py-8 text-center">No data loaded yet.</div>
-                    ) : queryResults.length === 0 ? (
-                      <div class="text-xs text-[#c3c6d7]/40 italic py-8 text-center">No rows returned.</div>
-                    ) : (
-                      <div className="overflow-x-auto w-full h-full max-h-full">
-                        <table className="w-full text-left font-body-md text-body-md whitespace-nowrap border-collapse">
-                          <thead className="bg-[#2d3449]/50 text-xs text-primary uppercase tracking-wider sticky top-0 z-10 border-b border-white/5">
-                            <tr>
-                              {Object.keys(queryResults[0]).map(k => (
-                                <th key={k} className="px-lg py-md">{k}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5 text-xs">
-                            {queryResults.map((row, idx) => (
-                              <tr key={idx} className={`${idx % 2 === 1 ? 'bg-white/[0.01]' : ''} hover:bg-white/5 transition-colors border-b border-white/5`}>
-                                {Object.keys(queryResults[0]).map(k => {
-                                  const val = row[k];
-                                  const displayVal = val === null ? "NULL" : val;
-                                  const isNumeric = typeof val === "number";
-                                  
-                                  if (displayVal === "[REDACTED]") {
-                                    return <td key={k} className="px-lg py-3 text-red-300 font-semibold">[REDACTED]</td>;
-                                  }
-                                  return (
-                                    <td key={k} className={`px-lg py-3 ${isNumeric ? 'text-right font-mono' : ''}`}>
-                                      {displayVal}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+
+                      {/* Execute Button */}
+                      <button
+                        onClick={handleExecuteQuery}
+                        disabled={isExecuting}
+                        className="bg-gradient-to-r from-primary to-secondary text-[#020617] font-bold px-5 rounded-xl flex items-center gap-2 hover:shadow-[0_0_15px_rgba(180,197,255,0.25)] hover:scale-[1.02] active:scale-95 transition-all duration-200 cursor-pointer border-none"
+                      >
+                        <span>Execute</span>
+                        <span className="material-symbols-outlined text-[16px] font-extrabold">bolt</span>
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="p-md text-sm leading-relaxed overflow-auto h-full">
+                </div>
+              </div>
+
+              {/* Right Pane: Compiled SQL code & Executive Narrative */}
+              <div className="h-full w-full flex flex-col gap-6 overflow-hidden">
+                
+                {/* Compiled SQL Block */}
+                <div className="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                  <div className="px-5 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-xs text-[#c3c6d7]">compiled_safe_query.sql</span>
+                      <span className={`text-[9px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${
+                        securityStatus.includes("VERIFIED") ? "bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/20" :
+                        securityStatus.includes("BLOCKED") ? "bg-red-950/40 text-red-400 border-red-500/20 animate-pulse" :
+                        "bg-primary/10 text-primary border-primary/20"
+                      }`}>
+                        {securityStatus}
+                      </span>
+                    </div>
+                    <button onClick={handleCopySql} className="text-[#c3c6d7] hover:text-white transition-colors bg-transparent border-none cursor-pointer">
+                      <span className="material-symbols-outlined text-base">content_copy</span>
+                    </button>
+                  </div>
+                  
+                  {/* Monaco Editor code container */}
+                  <div className="flex-grow p-5 monaco-editor overflow-auto custom-scrollbar text-xs font-mono text-[#eeefff] whitespace-pre-wrap">
+                    {renderHighlightedSQL(generatedSql)}
+                  </div>
+                </div>
+
+                {/* Executive Narrative Block */}
+                <div className="glass-card rounded-2xl h-[200px] flex flex-col overflow-hidden border border-white/5 bg-[#0b1326]/20 shrink-0">
+                  <div className="px-5 py-3 border-b border-white/5 bg-white/[0.01]">
+                    <h3 className="text-xs uppercase tracking-wider font-semibold text-tertiary flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base">subject</span>
+                      Executive Narrative (TL;DR)
+                    </h3>
+                  </div>
+                  <div className="flex-grow p-5 overflow-y-auto custom-scrollbar text-xs sm:text-sm leading-relaxed text-[#c3c6d7]">
                     {executionError ? (
-                      <div className="text-xs text-red-400 italic py-8 text-center font-semibold">
-                        Execution Blocked due to Security Policy Violation.
+                      <div className="text-red-400 italic font-semibold text-center py-6">
+                        Query blocked or syntax error returned. Review compiler trace logs.
                       </div>
                     ) : !narrativeResponse ? (
-                      <div className="text-xs text-[#c3c6d7]/40 italic py-8 text-center">Summary narrative will compile here once data is retrieved.</div>
+                      <div className="text-on-surface-variant/40 italic text-center py-6 select-none">
+                        Run a successful query to view the narrative report.
+                      </div>
                     ) : (
-                      <div className="text-on-surface whitespace-pre-wrap font-sans text-xs text-[#dae2fd]">
+                      <div className="whitespace-pre-wrap font-sans text-white leading-relaxed">
                         {narrativeResponse}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Visualization Pane */}
-            <div className="col-span-12 lg:col-span-5 glass-panel rounded-xl p-md flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between pb-sm border-b border-white/5 shrink-0">
-                <h3 className="font-label-sm text-label-sm text-primary uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">analytics</span>
-                  Dynamic Visualizer
-                </h3>
-                <div class="flex items-center gap-1 text-[10px] text-on-surface-variant">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3]"></span>
-                  Auto Chart
+              </div>
+
+            </div>
+          )}
+
+          {/* VIEW B: Data Studio View */}
+          {workspaceTab === 'studio' && (
+            <div className="h-full w-full grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+              
+              {/* Left/Center Column: Results Data Grid */}
+              <div className="glass-card rounded-2xl lg:col-span-2 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xs uppercase tracking-wider font-semibold text-primary flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base">table_chart</span>
+                      Tabular Results Grid
+                    </h3>
+                    <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] px-2 py-0.5 rounded font-bold">
+                      {filteredResults.length} Rows
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Search box to filter results table */}
+                    <input
+                      type="text"
+                      placeholder="Filter grid rows..."
+                      value={studioSearch}
+                      onChange={e => setStudioSearch(e.target.value)}
+                      className="bg-[#020617] border border-white/5 text-xs px-2.5 py-1 rounded-lg text-white focus:outline-none placeholder-white/20 outline-none w-36 sm:w-48"
+                    />
+
+                    {/* Exporter Button */}
+                    <button
+                      onClick={handleDownloadCSV}
+                      disabled={!queryResults || queryResults.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#4edea3]/20 bg-[#4edea3]/5 text-[#4edea3] hover:bg-[#4edea3]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">download</span>
+                      CSV
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-grow overflow-auto custom-scrollbar bg-[#020617]/50 h-full relative">
+                  {executionError ? (
+                    <div className="text-xs text-red-400 italic py-16 text-center font-semibold">
+                      Security Policy: Table request aborted due to validation failure.
+                    </div>
+                  ) : !queryResults ? (
+                    <div className="text-xs text-[#c3c6d7]/40 italic py-16 text-center select-none">
+                      No dataset loaded. Run a query in the Agent Console to preview results.
+                    </div>
+                  ) : filteredResults.length === 0 ? (
+                    <div className="text-xs text-[#c3c6d7]/40 italic py-16 text-center select-none">
+                      No records match the current filter.
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-[#131b2e]/60 text-primary uppercase tracking-wider font-bold sticky top-0 z-10 border-b border-white/5">
+                        <tr>
+                          {Object.keys(queryResults[0]).map(k => (
+                            <th key={k} className="px-4 py-3">{k}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 text-[#eeefff] font-mono">
+                        {filteredResults.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                            {Object.keys(queryResults[0]).map(k => {
+                              const val = row[k];
+                              const isRedacted = val === "[REDACTED]";
+                              return (
+                                <td key={k} className={`px-4 py-3 ${isRedacted ? 'text-red-400 font-bold' : ''}`}>
+                                  {val === null ? 'NULL' : String(val)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
-              <div className="flex-grow relative flex items-center justify-center p-sm overflow-hidden h-full min-h-[160px]">
-                <canvas ref={chartRef} id="insight-chart" className="w-full h-full max-h-full"></canvas>
-                {!queryResults && (
-                  <div className="absolute text-xs text-[#c3c6d7]/40 italic text-center">
-                    Charts will plot automatically based on table values.
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
 
-        </main>
+              {/* Right Column: Visualizer Chart Canvas */}
+              <div className="glass-card rounded-2xl flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">analytics</span>
+                    Dynamic Visualizer
+                  </h3>
+                  <span className="bg-secondary/15 text-secondary border border-secondary/20 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                    Bar Chart
+                  </span>
+                </div>
+                
+                <div className="flex-grow p-6 flex items-center justify-center relative overflow-hidden h-full">
+                  <canvas ref={chartRef} id="studio-chart" className="w-full h-full max-h-full"></canvas>
+                  {!queryResults && (
+                    <div className="absolute text-xs text-[#c3c6d7]/40 italic text-center select-none">
+                      Charts plot automatically when numerical keys are found.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* VIEW C: Schema & Glossary View */}
+          {workspaceTab === 'schema' && (
+            <div className="h-full w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+              
+              {/* Left Side: Introspection schema explorer list (Col span 8) */}
+              <div className="glass-card rounded-2xl lg:col-span-8 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-[#b4c5ff] flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">table_rows</span>
+                    SQLite Database Schema Explorer
+                  </h3>
+                  <button onClick={fetchTables} className="text-[#c3c6d7] hover:text-white transition-colors cursor-pointer bg-transparent border-none">
+                    <span className="material-symbols-outlined text-sm">sync</span>
+                  </button>
+                </div>
+
+                <div className="flex-grow p-6 overflow-y-auto space-y-3 custom-scrollbar h-full bg-[#020617]/25">
+                  {tables.length === 0 ? (
+                    <div className="text-xs text-on-surface-variant/40 italic py-16 text-center select-none">
+                      Connecting and introspection...
+                    </div>
+                  ) : (
+                    tables.map(table => {
+                      const isExpanded = expandedTables.has(table);
+                      const schema = tableSchemas[table];
+                      return (
+                        <div key={table} className="border border-white/5 bg-[#0b1326]/40 rounded-xl overflow-hidden">
+                          <div 
+                            onClick={() => toggleTableExpand(table)}
+                            className="flex items-center justify-between p-3.5 hover:bg-white/[0.02] cursor-pointer duration-150 select-none"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="material-symbols-outlined text-[#4edea3] text-[18px]">table_chart</span>
+                              <span className="text-xs sm:text-sm font-semibold text-white">{table}</span>
+                            </div>
+                            <span 
+                              className="material-symbols-outlined text-sm text-[#c3c6d7] transition-transform"
+                              style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                            >
+                              chevron_right
+                            </span>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="bg-[#020617] border-t border-white/5 p-3 space-y-1.5 text-xs font-mono text-[#c3c6d7] divide-y divide-white/[0.02]">
+                              {!schema ? (
+                                <div className="text-[10px] italic text-[#c3c6d7]/40 px-2 py-1">Loading columns...</div>
+                              ) : (
+                                schema.columns.map(col => {
+                                  const isPK = col.primary_key;
+                                  const fk = schema.foreign_keys.find(f => f.constrained_columns.includes(col.name));
+                                  return (
+                                    <div key={col.name} className="flex items-center px-3 py-2 hover:bg-white/5 rounded transition-all">
+                                      <span className="text-white font-medium">{col.name}</span>
+                                      <span className="text-[10px] text-white/30 ml-2 font-sans">{col.type}</span>
+                                      {isPK && <span className="text-secondary text-[10px] ml-auto font-sans font-bold border border-secondary/20 bg-secondary/5 px-1.5 py-0.5 rounded">🔑 PK</span>}
+                                      {fk && <span className="text-primary text-[10px] ml-auto font-sans font-bold border border-primary/20 bg-primary/5 px-1.5 py-0.5 rounded cursor-help" title={`References ${fk.referred_table}`}>🔗 FK</span>}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Right Side: Semantic glossary forms (Col span 4) */}
+              <div className="glass-card rounded-2xl lg:col-span-4 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
+                <div className="px-5 py-4 border-b border-white/5 bg-white/[0.01] shrink-0">
+                  <h3 className="text-xs uppercase tracking-wider font-semibold text-tertiary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">book_2</span>
+                    Map Vector Glossary
+                  </h3>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Associate fuzzy corporate vocabulary synonyms to exact database columns to assist AI parsing logic (e.g. mapping "sales" to `Invoice.Total`).
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-white/40 block mb-1">Synonym Term</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. quarterly sales" 
+                        value={gTerm}
+                        onChange={e => setGTerm(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2 text-white outline-none focus:border-primary/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-white/40 block mb-1">Business Definition</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Total price paid on customer invoices" 
+                        value={gDef}
+                        onChange={e => setGDef(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2 text-white outline-none focus:border-primary/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-white/40 block mb-1">SQLite Target Column Hint</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Invoice.Total" 
+                        value={gSql}
+                        onChange={e => setGSql(e.target.value)}
+                        className="w-full bg-[#020617] border border-white/5 rounded-lg text-xs px-3 py-2 text-white outline-none focus:border-primary/50"
+                      />
+                    </div>
+
+                    <button 
+                      onClick={registerGlossary}
+                      disabled={isRegisteringGlossary}
+                      className="w-full mt-2 bg-gradient-to-r from-primary to-secondary text-[#020617] py-2.5 rounded-xl text-xs font-bold hover:shadow-lg hover:shadow-primary/5 transition-all active:scale-[0.98] border-none cursor-pointer"
+                    >
+                      {isRegisteringGlossary ? 'Registering...' : 'Register Glossary Term'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* VIEW D: Collaborative War Room Tab */}
+          {workspaceTab === 'warroom' && (
+            <div className="h-full w-full flex flex-col overflow-hidden relative rounded-2xl border border-white/5 bg-[#0b1326]/10">
+              
+              {/* Whiteboard dotted viewport */}
+              <div className="flex-grow relative dotted-grid overflow-hidden flex items-center justify-center p-6">
+                
+                {/* Visual grid watermark title */}
+                <div className="absolute top-4 left-6 text-left select-none pointer-events-none">
+                  <h4 className="text-xs uppercase tracking-widest font-extrabold text-white/30">Shared Board Workspace</h4>
+                  <p className="text-[10px] text-white/20 mt-1">Multiplayer cursor coordination active (WebSocket loop simulation)</p>
+                </div>
+
+                {/* Multiplayer cursor representations */}
+                {cursors.map(c => (
+                  <div 
+                    key={c.id} 
+                    className="absolute pointer-events-none transition-all duration-100 flex gap-1 z-30 select-none"
+                    style={{ left: `${c.x}px`, top: `${c.y}px` }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.5 3V19.5L10.5 13.5H19.5L4.5 3Z" fill={c.color} stroke="white" strokeWidth="1.5"/>
+                    </svg>
+                    <div 
+                      className="text-[8px] font-bold px-1.5 py-0.5 rounded shadow mt-3 whitespace-nowrap text-[#020617]"
+                      style={{ backgroundColor: c.color }}
+                    >
+                      {c.name}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Floating canvas cards representing workspace widgets */}
+                <div className="relative w-full h-full max-w-5xl max-h-[500px]">
+                  
+                  {/* Card A: Compiled Statement card */}
+                  <div className="absolute top-[5%] left-[5%] w-72 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-primary">
+                      <span>Query Statement</span>
+                      <span className="w-2 h-2 rounded-full bg-secondary" />
+                    </div>
+                    <code className="text-[9px] font-mono text-[#c3c6d7] block leading-relaxed whitespace-pre-wrap">
+                      SELECT EmployeeId, FirstName FROM Employee WHERE Title = 'Sales Manager';
+                    </code>
+                  </div>
+
+                  {/* Card B: static mini-chart visualizer card */}
+                  <div className="absolute top-[45%] left-[10%] w-80 p-4 bg-[#0b1326]/85 border border-[#4edea3]/20 rounded-2xl shadow-xl select-none z-10">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-secondary">
+                      <span>Sales Summary Chart</span>
+                      <span className="text-[8px] border border-[#4edea3]/30 px-1 rounded">2026</span>
+                    </div>
+                    <div className="h-24 bg-[#020617] border border-white/5 rounded-lg flex items-end justify-between p-3 gap-2">
+                      <div className="w-4 bg-primary/20 h-[30%] rounded-sm" />
+                      <div className="w-4 bg-primary/40 h-[60%] rounded-sm" />
+                      <div className="w-4 bg-gradient-to-t from-primary to-secondary h-[85%] rounded-sm" />
+                      <div className="w-4 bg-primary/50 h-[45%] rounded-sm" />
+                    </div>
+                  </div>
+
+                  {/* Card C: TLDR narrative brief card */}
+                  <div className="absolute top-[10%] left-[55%] w-80 p-4 bg-[#0b1326]/85 border border-white/10 rounded-2xl shadow-xl select-none z-10">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/5 mb-3 text-[10px] uppercase font-bold text-tertiary">
+                      <span>Executive Brief Card</span>
+                      <span className="material-symbols-outlined text-[12px]">subject</span>
+                    </div>
+                    <p className="text-[10px] text-[#c3c6d7] leading-relaxed">
+                      • Customer volume in South America rose by 14% year-over-year.<br/>
+                      • Brazil invoices accounts for 63% of the continent sales.<br/>
+                      • Top support rep is resolved to Margaret Park.
+                    </p>
+                  </div>
+
+                  {/* Card D: Collaborative Yellow Sticky Note */}
+                  <div className="absolute top-[60%] left-[60%] w-60 p-4 bg-amber-400/90 text-[#302100] rounded-xl shadow-2xl rotate-2 select-none z-10 hover:rotate-0 transition-transform">
+                    <div className="text-[9px] uppercase font-extrabold opacity-60 tracking-wider mb-2">Team Note</div>
+                    <p className="text-[11px] leading-relaxed font-bold font-sans">
+                      "I verified the Brazil invoice counts with Sarah. The corrected query is compiled and ready to be exported to the client. Let's get feedback!"
+                    </p>
+                    <div className="mt-3 text-[8px] font-bold text-right opacity-60">- Mark</div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
