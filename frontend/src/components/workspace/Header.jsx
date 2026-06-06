@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 export default function Header({ 
   workspaceTab, 
   user, 
-  handleLogout, 
   activeDatabaseId, 
   setActiveDatabaseId, 
   databases, 
@@ -20,6 +19,18 @@ export default function Header({
   const [loading, setLoading] = useState(false);
   
   const dropdownRef = useRef(null);
+
+  const tabInfo = {
+    console: { icon: 'forum', title: 'Conversation Console' },
+    studio: { icon: 'analytics', title: 'Data Studio Visuals' },
+    dashboard: { icon: 'space_dashboard', title: 'Dashboard Workspace' },
+    schema: { icon: 'schema', title: 'Database Introspection' },
+    alerts: { icon: 'notifications_active', title: 'Smoke Detector Alerts' },
+    users: { icon: 'group', title: 'Enterprise Users Dashboard' },
+    databases: { icon: 'database', title: 'Connections Management' },
+  };
+
+  const currentTab = tabInfo[workspaceTab] || { icon: 'database', title: 'Workspace' };
 
   // Close dropdown if clicked outside
   useEffect(() => {
@@ -105,44 +116,12 @@ export default function Header({
       <header className="w-full h-16 bg-surface/50 border-b border-outline-variant flex justify-between items-center px-4 sm:px-6 shrink-0 z-20 backdrop-blur-md">
         {/* Left: Tab Title Indicator */}
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-xs sm:text-sm font-bold tracking-wider text-on-surface truncate uppercase flex items-center gap-2">
-            {workspaceTab === 'console' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                💬 Conversation Console
-              </>
-            )}
-            {workspaceTab === 'studio' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                📊 Data Studio Visuals
-              </>
-            )}
-            {workspaceTab === 'schema' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-                🗄️ Database Introspection
-              </>
-            )}
-            {workspaceTab === 'alerts' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
-                🔔 Smoke Detector Alerts
-              </>
-            )}
-            {workspaceTab === 'users' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                👥 Enterprise Users Dashboard
-              </>
-            )}
-            {workspaceTab === 'databases' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                🗄️ Connections Management
-              </>
-            )}
-          </span>
+          <div className="flex items-center gap-2.5 text-primary text-base sm:text-lg font-extrabold tracking-wide uppercase truncate select-none">
+            <span className="material-symbols-outlined text-[20px] sm:text-[22px] shrink-0 font-fill">
+              {currentTab.icon}
+            </span>
+            <span>{currentTab.title}</span>
+          </div>
         </div>
 
         {/* Right: User status, database selector, logout */}
@@ -248,14 +227,6 @@ export default function Header({
               </div>
             )}
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="bg-surface-dim hover:bg-red-50 text-on-surface-variant hover:text-red-600 border border-outline-variant hover:border-red-200 transition-all cursor-pointer rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 active:scale-95"
-          >
-            <span className="material-symbols-outlined text-sm">logout</span>
-            <span className="hidden sm:inline">Logout</span>
-          </button>
         </div>
       </header>
 

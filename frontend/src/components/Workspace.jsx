@@ -133,6 +133,7 @@ export default function Workspace({ setView }) {
         setWorkspaceTab={changeWorkspaceTab} 
         user={user} 
         setView={setView} 
+        handleLogout={handleLogout}
       />
 
       {/* 2. Main Workspace Layout */}
@@ -142,7 +143,6 @@ export default function Workspace({ setView }) {
         <Header 
           workspaceTab={workspaceTab} 
           user={user} 
-          handleLogout={handleLogout}
           activeDatabaseId={activeDatabaseId}
           setActiveDatabaseId={(id) => {
             localStorage.setItem("activeDatabaseId", id);

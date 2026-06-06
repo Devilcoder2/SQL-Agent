@@ -4,6 +4,71 @@
 /* eslint-disable no-useless-escape */
 import { useState, useEffect, useRef } from 'react';
 
+const renderMarkdown = (text) => {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const renderedElements = [];
+  let currentList = [];
+
+  const flushList = (key) => {
+    if (currentList.length > 0) {
+      renderedElements.push(
+        <ul key={key} className="list-disc pl-5 mb-3 space-y-1.5">
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  const parseInlineStyles = (lineText) => {
+    const parts = lineText.split(/\*\*([^*]+)\*\*/g);
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <strong key={index} className="text-on-surface font-extrabold">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList(`list-${idx}`);
+      return;
+    }
+
+    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      flushList(`list-${idx}`);
+      const level = headerMatch[1].length;
+      const headerText = headerMatch[2];
+      const parsedText = parseInlineStyles(headerText);
+      const classes = level === 1 ? "text-base font-bold text-on-surface mb-2" :
+                      level === 2 ? "text-sm font-bold text-on-surface mb-2" :
+                      "text-xs font-bold text-on-surface mb-1.5";
+      const DynamicTag = `h${level}`;
+      renderedElements.push(<DynamicTag key={idx} className={classes}>{parsedText}</DynamicTag>);
+      return;
+    }
+
+    const listMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+    if (listMatch) {
+      const itemText = listMatch[1];
+      const parsedText = parseInlineStyles(itemText);
+      currentList.push(<li key={`li-${idx}`} className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">{parsedText}</li>);
+      return;
+    }
+
+    flushList(`list-${idx}`);
+    const parsedText = parseInlineStyles(trimmed);
+    renderedElements.push(<p key={idx} className="mb-2 text-on-surface-variant text-xs sm:text-sm leading-relaxed">{parsedText}</p>);
+  });
+
+  flushList(`list-final`);
+  return <div className="space-y-1 text-left">{renderedElements}</div>;
+};
 
 export default function StudioTab({
   fetch,
@@ -513,6 +578,28 @@ export default function StudioTab({
                 <span>No charts plotted. Run a query in the Console first, then open Studio to chart.</span>
               </div>
             )}
+          </div>
+
+          {/* Executive Narrative Block */}
+          <div className="h-[220px] border-t border-outline-variant flex flex-col overflow-hidden bg-surface shrink-0">
+            <div className="px-4.5 py-3 border-b border-outline-variant bg-surface-dim select-none">
+              <h3 className="text-[10px] uppercase tracking-wider font-extrabold text-tertiary flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">subject</span>
+                Executive Narrative Brief
+              </h3>
+            </div>
+            <div className="flex-grow p-4.5 overflow-y-auto custom-scrollbar text-xs leading-relaxed text-on-surface-variant">
+              {!narrativeResponse ? (
+                <div className="text-on-surface-variant/30 italic text-center py-6 select-none flex flex-col items-center justify-center h-full gap-1">
+                  <span className="material-symbols-outlined text-2xl opacity-40">find_in_page</span>
+                  <span>No report compiled. Run a successful query in the Console to view narrative details.</span>
+                </div>
+              ) : (
+                <div className="font-sans leading-relaxed">
+                  {renderMarkdown(narrativeResponse)}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

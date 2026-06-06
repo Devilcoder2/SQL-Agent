@@ -84,6 +84,7 @@ export default function ConsoleTab({
   const [isExecuting, setIsExecuting] = useState(false);
   const [logs, setLogs] = useState([]);
   const [securityStatus, setSecurityStatus] = useState("Unverified");
+  // eslint-disable-next-line no-unused-vars
   const [executionError, setExecutionError] = useState(null);
 
   // Multi-chat states
@@ -93,11 +94,11 @@ export default function ConsoleTab({
   const [activeMessageId, setActiveMessageId] = useState(null);
   
   // Draggable Layout States
-  const [chatSidebarOpen, setChatSidebarOpen] = useState(true);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
 
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [inspectorWidth, setInspectorWidth] = useState(380);
   const [isResizingInspector, setIsResizingInspector] = useState(false);
 
@@ -500,7 +501,7 @@ export default function ConsoleTab({
       {chatSidebarOpen && (
         <div 
           style={{ width: `${sidebarWidth}px` }}
-          className="flex flex-col h-full bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden shrink-0 relative"
+          className="flex flex-col h-full bg-surface border border-outline-variant rounded-2xl overflow-hidden shrink-0 relative"
         >
           <button
             onClick={() => createSession()}
@@ -570,7 +571,7 @@ export default function ConsoleTab({
               title={chatSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
               <span className="material-symbols-outlined text-xl">
-                {chatSidebarOpen ? "menu_open" : "menu"}
+                {chatSidebarOpen ? "left_panel_close" : "left_panel_open"}
               </span>
             </button>
             <h3 className="text-[11px] uppercase tracking-wider font-extrabold text-secondary flex items-center gap-1.5">
@@ -851,32 +852,7 @@ export default function ConsoleTab({
             </div>
           </div>
 
-          {/* Executive Narrative Block */}
-          <div className="glass-card rounded-2xl h-[200px] flex flex-col overflow-hidden border border-outline-variant bg-surface shrink-0">
-            <div className="px-4.5 py-3 border-b border-outline-variant bg-surface-dim select-none">
-              <h3 className="text-[10px] uppercase tracking-wider font-extrabold text-tertiary flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm">subject</span>
-                Executive Narrative Brief
-              </h3>
-            </div>
-            <div className="flex-grow p-4.5 overflow-y-auto custom-scrollbar text-xs leading-relaxed text-on-surface-variant">
-              {executionError ? (
-                <div className="text-error italic font-semibold text-center py-6 flex flex-col items-center justify-center gap-1">
-                  <span className="material-symbols-outlined text-2xl">gpp_bad</span>
-                  <span>Query blocked or compile traceback error.</span>
-                </div>
-              ) : !narrativeResponse ? (
-                <div className="text-on-surface-variant/30 italic text-center py-6 select-none flex flex-col items-center justify-center h-full gap-1">
-                  <span className="material-symbols-outlined text-2xl opacity-40">find_in_page</span>
-                  <span>Run a successful query to view report</span>
-                </div>
-              ) : (
-                <div className="font-sans leading-relaxed">
-                  {renderMarkdown(narrativeResponse)}
-                </div>
-              )}
-            </div>
-          </div>
+
 
         </div>
       )}

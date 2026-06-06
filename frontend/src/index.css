@@ -130,7 +130,7 @@
 /* Draggable Splitter Handle */
 .resizer-handle {
   width: 4px;
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
   cursor: col-resize;
   transition: all 0.2s ease;
   position: relative;
@@ -219,4 +219,8 @@
 
 .primary-gradient-btn {
   background: linear-gradient(90deg, #1f6f44 0%, #c85a32 100%);
+}
+
+.font-fill {
+  font-variation-settings: 'FILL' 1;
 }

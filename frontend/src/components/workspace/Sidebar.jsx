@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }) {
+export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView, handleLogout }) {
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem("sidebarCollapsed") === "true";
   });
@@ -30,20 +30,27 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
         }`}
       >
         <div className="flex flex-col items-stretch gap-6 w-full px-3">
-          {/* Brand Logo & Header */}
-          <div className={`flex items-center gap-3 px-2 ${isCollapsed ? 'justify-center' : 'justify-start'}`}>
-            <button 
-              onClick={() => setView('landing')} 
-              className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center cursor-pointer shadow-lg shadow-primary/10 border-none hover:scale-105 active:scale-95 transition-all shrink-0"
-              title="Back to Landing Page"
+          {/* Brand Logo & Header / Collapse option */}
+          <div className={`flex items-center w-full px-2 ${isCollapsed ? 'flex-col gap-4' : 'flex-row justify-between'}`}>
+            <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : 'justify-start'}`}>
+              <button 
+                onClick={() => setView('landing')} 
+                className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center cursor-pointer shadow-lg shadow-primary/10 border-none hover:scale-105 active:scale-95 transition-all shrink-0"
+                title="Back to Landing Page"
+              >
+                <span className="material-symbols-outlined text-on-primary font-bold text-xl">database</span>
+              </button>
+            </div>
+            
+            <button
+              onClick={toggleSidebar}
+              className="flex items-center justify-center p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-dim transition-colors cursor-pointer bg-transparent border-none shrink-0"
+              title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
-              <span className="material-symbols-outlined text-on-primary font-bold text-xl">database</span>
-            </button>
-            {!isCollapsed && (
-              <span className="font-extrabold text-sm tracking-widest text-on-surface uppercase">
-                Veridian<span className="text-primary">SQL</span>
+              <span className="material-symbols-outlined text-[18px]">
+                {isCollapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}
               </span>
-            )}
+            </button>
           </div>
 
           {/* Navigation Items List */}
@@ -69,39 +76,25 @@ export default function Sidebar({ workspaceTab, setWorkspaceTab, user, setView }
                       {item.label}
                     </span>
                   )}
-                  {/* Active highlight bar on expanded sidebar */}
-                  {!isCollapsed && isActive && (
-                    <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
+
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Footer actions: Toggle collapse & Exit */}
+        {/* Footer actions: Logout */}
         <div className="flex flex-col gap-2 px-3">
-          {/* Toggle Sidebar Button */}
+          {/* Logout Button */}
           <button
-            onClick={toggleSidebar}
-            className="flex items-center justify-center p-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-dim transition-colors cursor-pointer bg-transparent border-none"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {isCollapsed ? "keyboard_double_arrow_right" : "keyboard_double_arrow_left"}
-            </span>
-          </button>
-
-          {/* Logout/Exit Button */}
-          <button
-            onClick={() => setView('landing')}
+            onClick={handleLogout}
             className={`flex items-center rounded-xl p-2.5 text-on-surface-variant hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer bg-transparent border-none ${
               isCollapsed ? 'justify-center' : 'justify-start gap-3'
             }`}
-            title="Exit Workspace"
+            title="Logout"
           >
             <span className="material-symbols-outlined text-[20px]">logout</span>
-            {!isCollapsed && <span className="text-xs font-semibold">Exit Workspace</span>}
+            {!isCollapsed && <span className="text-xs font-semibold">Logout</span>}
           </button>
         </div>
       </aside>
