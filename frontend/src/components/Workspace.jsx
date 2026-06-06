@@ -44,6 +44,10 @@ export default function Workspace({ setView }) {
   const [generatedSql, setGeneratedSql] = useState("");
   const [narrativeResponse, setNarrativeResponse] = useState("");
 
+  // --- Global Header Search States ---
+  const [studioSearch, setStudioSearch] = useState("");
+  const [tableSearch, setTableSearch] = useState("");
+
   // --- Multi-Database Management State ---
   const [activeDatabaseId, setActiveDatabaseId] = useState(() => localStorage.getItem("activeDatabaseId") || "default");
   const [databases, setDatabases] = useState([]);
@@ -151,6 +155,10 @@ export default function Workspace({ setView }) {
           databases={databases}
           fetchDatabases={fetchDatabases}
           fetch={fetchWrapper}
+          studioSearch={studioSearch}
+          setStudioSearch={setStudioSearch}
+          tableSearch={tableSearch}
+          setTableSearch={setTableSearch}
         />
 
         {/* Workspace Active Views Render Window */}
@@ -178,6 +186,8 @@ export default function Workspace({ setView }) {
               queryResults={queryResults}
               narrativeResponse={narrativeResponse}
               generatedSql={generatedSql}
+              studioSearch={studioSearch}
+              setStudioSearch={setStudioSearch}
             />
           )}
 
@@ -192,7 +202,12 @@ export default function Workspace({ setView }) {
 
           {/* VIEW C: Schema & Glossary View */}
           {workspaceTab === 'schema' && user?.can_view_schema !== false && (
-            <SchemaTab fetch={fetchWrapper} activeDatabaseId={activeDatabaseId} />
+            <SchemaTab 
+              fetch={fetchWrapper} 
+              activeDatabaseId={activeDatabaseId} 
+              tableSearch={tableSearch}
+              setTableSearch={setTableSearch}
+            />
           )}
 
 

@@ -25,7 +25,7 @@ const renderMarkdown = (text) => {
     const parts = lineText.split(/\*\*([^*]+)\*\*/g);
     return parts.map((part, index) => {
       if (index % 2 === 1) {
-        return <strong key={index} className="text-white font-extrabold">{part}</strong>;
+        return <strong key={index} className="text-primary font-extrabold">{part}</strong>;
       }
       return part;
     });
@@ -44,9 +44,9 @@ const renderMarkdown = (text) => {
       const level = headerMatch[1].length;
       const headerText = headerMatch[2];
       const parsedText = parseInlineStyles(headerText);
-      const classes = level === 1 ? "text-base font-bold text-white mb-2" :
-                      level === 2 ? "text-sm font-bold text-white mb-2" :
-                      "text-xs font-bold text-white mb-1.5";
+      const classes = level === 1 ? "text-base font-bold text-primary mb-2" :
+                      level === 2 ? "text-sm font-bold text-primary mb-2" :
+                      "text-xs font-bold text-primary mb-1.5";
       const DynamicTag = `h${level}`;
       renderedElements.push(<DynamicTag key={idx} className={classes}>{parsedText}</DynamicTag>);
       return;
@@ -444,13 +444,13 @@ export default function ConsoleTab({
 
     const lines = escaped.split('\n');
     return (
-      <div className="font-mono text-[11px] sm:text-xs leading-relaxed select-text flex flex-col h-full bg-[#05070c] py-2 px-1">
+      <div className="font-mono text-[11px] sm:text-xs leading-relaxed select-text flex flex-col h-full bg-surface py-2 px-1">
         {lines.map((line, idx) => (
-          <div key={idx} className="flex hover:bg-white/[0.02] py-0.5 px-1 rounded transition-colors group">
-            <span className="w-8 text-on-surface-variant/20 select-none text-right pr-3 font-semibold font-mono text-[10px] sm:text-xs border-r border-white/5 mr-3">
+          <div key={idx} className="flex hover:bg-black/[0.02] py-0.5 px-1 rounded transition-colors group">
+            <span className="w-8 text-on-surface-variant/40 select-none text-right pr-3 font-semibold font-mono text-[10px] sm:text-xs border-r border-outline-variant/60 mr-3">
               {idx + 1}
             </span>
-            <span className="flex-grow whitespace-pre-wrap text-[#e2e8f0]" dangerouslySetInnerHTML={{ __html: line || " " }} />
+            <span className="flex-grow whitespace-pre-wrap text-on-surface" dangerouslySetInnerHTML={{ __html: line || " " }} />
           </div>
         ))}
       </div>
@@ -581,7 +581,7 @@ export default function ConsoleTab({
           </div>
           
           <div className="flex items-center gap-3">
-            {isExecuting && <span className="material-symbols-outlined text-secondary animate-spin text-sm">sync</span>}
+            {isExecuting && <span className="material-symbols-outlined text-secondary animate-spin-reverse text-sm">sync</span>}
             <button
               onClick={() => setInspectorOpen(!inspectorOpen)}
               className="text-on-surface-variant hover:text-on-surface transition-colors bg-transparent border-none cursor-pointer flex items-center p-1 rounded hover:bg-surface-dim"
@@ -638,7 +638,7 @@ export default function ConsoleTab({
                   <div key={m.id || idx} className="flex flex-col gap-2.5 max-w-[90%] self-start mb-4">
                     <div className="flex items-center justify-between w-full">
                       <div className="text-[10px] text-primary uppercase font-bold tracking-wider flex items-center gap-1.5 pl-1 animate-pulse">
-                        <span className="material-symbols-outlined text-[12px] animate-spin">sync</span>
+                        <span className="material-symbols-outlined text-[12px] animate-spin-reverse">sync</span>
                         LangGraph Thought Stream
                       </div>
                       <button 

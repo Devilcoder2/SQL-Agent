@@ -7,7 +7,11 @@ export default function Header({
   setActiveDatabaseId, 
   databases, 
   fetchDatabases, 
-  fetch 
+  fetch,
+  studioSearch,
+  setStudioSearch,
+  tableSearch,
+  setTableSearch
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -115,7 +119,7 @@ export default function Header({
     <>
       <header className="w-full h-16 bg-surface/50 border-b border-outline-variant flex justify-between items-center px-4 sm:px-6 shrink-0 z-20 backdrop-blur-md">
         {/* Left: Tab Title Indicator */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 shrink-0">
           <div className="flex items-center gap-2.5 text-primary text-base sm:text-lg font-extrabold tracking-wide uppercase truncate select-none">
             <span className="material-symbols-outlined text-[20px] sm:text-[22px] shrink-0 font-fill">
               {currentTab.icon}
@@ -123,6 +127,22 @@ export default function Header({
             <span>{currentTab.title}</span>
           </div>
         </div>
+
+        {/* Center: Search Bar */}
+        {(workspaceTab === 'studio' || workspaceTab === 'schema') && (
+          <div className="flex-grow mx-4 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
+            <div className="relative flex items-center bg-surface-dim border border-outline-variant hover:border-outline focus-within:border-primary/50 transition-all rounded-xl px-3 py-1.5 w-full">
+              <span className="material-symbols-outlined text-[16px] text-on-surface-variant/40 mr-2 select-none">search</span>
+              <input
+                type="text"
+                placeholder={workspaceTab === 'studio' ? "Filter grid columns..." : "Search table names..."}
+                value={workspaceTab === 'studio' ? studioSearch : tableSearch}
+                onChange={e => workspaceTab === 'studio' ? setStudioSearch(e.target.value) : setTableSearch(e.target.value)}
+                className="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface outline-none placeholder-on-surface-variant/40"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Right: User status, database selector, logout */}
         <div className="flex items-center gap-3 sm:gap-4 ml-4 shrink-0">

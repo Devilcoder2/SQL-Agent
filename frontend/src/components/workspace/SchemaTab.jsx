@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react';
 
 
-export default function SchemaTab({ fetch, activeDatabaseId }) {
+export default function SchemaTab({ fetch, activeDatabaseId, tableSearch }) {
   const [tables, setTables] = useState([]);
   const [tableSchemas, setTableSchemas] = useState({}); // { tableName: { columns: [], fkeys: [] } }
   const [expandedTables, setExpandedTables] = useState(new Set());
-  
-  const [tableSearch, setTableSearch] = useState("");
 
   // Glossary Form State
   const [gTerm, setGTerm] = useState("");
@@ -176,13 +174,6 @@ export default function SchemaTab({ fetch, activeDatabaseId }) {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <input
-              type="text"
-              placeholder="Search table names..."
-              value={tableSearch}
-              onChange={e => setTableSearch(e.target.value)}
-              className="bg-surface border border-outline/30 text-xs px-3 py-1.5 rounded-xl text-on-surface focus:outline-none placeholder-on-surface-variant/40 outline-none w-32 sm:w-44 focus:border-primary/50 transition-colors"
-            />
             <button 
               onClick={fetchTables} 
               className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer bg-transparent border-none flex p-1 rounded hover:bg-surface-container"

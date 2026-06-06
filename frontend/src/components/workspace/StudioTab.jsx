@@ -26,7 +26,7 @@ const renderMarkdown = (text) => {
     const parts = lineText.split(/\*\*([^*]+)\*\*/g);
     return parts.map((part, index) => {
       if (index % 2 === 1) {
-        return <strong key={index} className="text-on-surface font-extrabold">{part}</strong>;
+        return <strong key={index} className="text-primary font-extrabold">{part}</strong>;
       }
       return part;
     });
@@ -45,9 +45,9 @@ const renderMarkdown = (text) => {
       const level = headerMatch[1].length;
       const headerText = headerMatch[2];
       const parsedText = parseInlineStyles(headerText);
-      const classes = level === 1 ? "text-base font-bold text-on-surface mb-2" :
-                      level === 2 ? "text-sm font-bold text-on-surface mb-2" :
-                      "text-xs font-bold text-on-surface mb-1.5";
+      const classes = level === 1 ? "text-base font-bold text-primary mb-2" :
+                      level === 2 ? "text-sm font-bold text-primary mb-2" :
+                      "text-xs font-bold text-primary mb-1.5";
       const DynamicTag = `h${level}`;
       renderedElements.push(<DynamicTag key={idx} className={classes}>{parsedText}</DynamicTag>);
       return;
@@ -75,9 +75,9 @@ export default function StudioTab({
   query,
   queryResults,
   narrativeResponse,
-  generatedSql
+  generatedSql,
+  studioSearch
 }) {
-  const [studioSearch, setStudioSearch] = useState("");
   
   // Chart states
   const [chartType, setChartType] = useState("bar");
@@ -92,7 +92,24 @@ export default function StudioTab({
   // Drag split states
   const [editorWidth, setEditorWidth] = useState(380);
   const [editorOpen, setEditorOpen] = useState(true);
+  const [tableOpen, setTableOpen] = useState(true);
   const [isResizing, setIsResizing] = useState(false);
+
+  const toggleEditor = () => {
+    const nextState = !editorOpen;
+    setEditorOpen(nextState);
+    if (!nextState) {
+      setTableOpen(true);
+    }
+  };
+
+  const toggleTable = () => {
+    const nextState = !tableOpen;
+    setTableOpen(nextState);
+    if (!nextState) {
+      setEditorOpen(true);
+    }
+  };
 
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
@@ -361,7 +378,7 @@ export default function StudioTab({
     const parts = String(text === null ? 'NULL' : text).split(new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
     return parts.map((part, index) => 
       part.toLowerCase() === highlight.toLowerCase() 
-        ? <mark key={index} className="bg-amber-500/25 text-amber-200 px-0.5 rounded">{part}</mark> 
+        ? <mark key={index} className="bg-amber-200/60 px-0.5 rounded">{part}</mark> 
         : part
     );
   };
@@ -392,7 +409,8 @@ export default function StudioTab({
     <div className="h-full w-full flex overflow-hidden text-left relative gap-0 animate-fade-in">
       
       {/* Left/Center Column: Results Data Grid */}
-      <div className="glass-card rounded-2xl flex-grow flex flex-col h-full overflow-hidden">
+      {tableOpen && (
+        <div className="glass-card rounded-2xl flex-grow flex flex-col h-full overflow-hidden">
         <div className="px-5 py-3.5 border-b border-outline-variant flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-surface-dim/20 shrink-0 gap-3">
           <div className="flex items-center gap-3">
             <h3 className="text-xs uppercase tracking-wider font-extrabold text-primary flex items-center gap-2">
@@ -405,14 +423,6 @@ export default function StudioTab({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
-            <input
-              type="text"
-              placeholder="Filter grid columns..."
-              value={studioSearch}
-              onChange={e => setStudioSearch(e.target.value)}
-              className="bg-surface border border-outline/30 text-xs px-3 py-1.5 rounded-xl text-on-surface focus:outline-none placeholder-on-surface-variant/40 outline-none w-full sm:w-36 md:w-44 focus:border-primary/50 transition-colors"
-            />
-
             <button
               onClick={handleExportExcel}
               disabled={!queryResults}
@@ -441,7 +451,7 @@ export default function StudioTab({
             </button>
 
             <button
-              onClick={() => setEditorOpen(!editorOpen)}
+              onClick={toggleEditor}
               className="text-on-surface-variant hover:text-primary transition-colors bg-transparent border-none cursor-pointer flex items-center p-1 rounded hover:bg-surface-container"
               title={editorOpen ? "Collapse Chart Visualizer" : "Expand Chart Visualizer"}
             >
@@ -491,9 +501,10 @@ export default function StudioTab({
           )}
         </div>
       </div>
+      )}
 
       {/* Draggable Splitter Handle */}
-      {editorOpen && (
+      {editorOpen && tableOpen && (
         <div 
           className={`resizer-handle ${isResizing ? 'is-dragging' : ''}`}
           onMouseDown={startResize}
@@ -503,24 +514,37 @@ export default function StudioTab({
       {/* Right Column: Visualizer Chart Canvas & Axis Builders */}
       {editorOpen && (
         <div 
-          style={{ width: `${editorWidth}px` }}
-          className="glass-card rounded-2xl flex flex-col h-full overflow-hidden shrink-0 ml-1.5"
+          style={tableOpen ? { width: `${editorWidth}px` } : undefined}
+          className={`glass-card rounded-2xl flex flex-col h-full overflow-hidden ${
+            tableOpen ? 'shrink-0 ml-1.5' : 'flex-grow'
+          }`}
         >
           <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-dim/20 shrink-0 select-none">
             <h3 className="text-xs uppercase tracking-wider font-extrabold text-secondary flex items-center gap-1.5">
               <span className="material-symbols-outlined text-base">analytics</span>
               Visualizer Editor
             </h3>
-            {queryResults && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setPinModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/15 hover:bg-secondary/25 border border-secondary/20 text-secondary rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
-                title="Pin this chart layout to Dashboard"
+                onClick={toggleTable}
+                className="text-on-surface-variant hover:text-primary transition-colors bg-transparent border-none cursor-pointer flex p-1 rounded hover:bg-surface-container"
+                title={tableOpen ? "Collapse Tabular Results" : "Expand Tabular Results"}
               >
-                <span className="material-symbols-outlined text-xs font-bold">keep</span>
-                Pin Chart
+                <span className="material-symbols-outlined text-base">
+                  {tableOpen ? "left_panel_close" : "table_chart"}
+                </span>
               </button>
-            )}
+              {queryResults && (
+                <button
+                  onClick={() => setPinModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/15 hover:bg-secondary/25 border border-secondary/20 text-secondary rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+                  title="Pin this chart layout to Dashboard"
+                >
+                  <span className="material-symbols-outlined text-xs font-bold">keep</span>
+                  Pin Chart
+                </button>
+              )}
+            </div>
           </div>
           
           {/* Editor controls when data is loaded */}
