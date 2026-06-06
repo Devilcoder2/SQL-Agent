@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export default function Landing({ setView }) {
   // Sandbox Simulator State
@@ -37,34 +37,35 @@ export default function Landing({ setView }) {
   const currentSim = simulatorData[activeQueryType];
 
   return (
-    <div className="min-h-screen bg-[#020617] text-[#dae2fd] overflow-x-hidden font-sans selection:bg-primary/30 selection:text-white">
+    <div className="min-h-screen bg-surface text-on-surface overflow-x-hidden font-sans selection:bg-primary/20 selection:text-primary relative">
       
       {/* Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none z-0" />
-      <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-secondary/5 blur-[150px] pointer-events-none z-0" />
+      <div className="absolute top-[-10%] left-[-15%] w-[600px] h-[600px] rounded-full bg-primary/5 blur-[130px] pointer-events-none z-0" />
+      <div className="absolute top-[35%] right-[-15%] w-[700px] h-[700px] rounded-full bg-secondary/5 blur-[160px] pointer-events-none z-0" />
+      <div className="absolute bottom-[5%] left-[20%] w-[500px] h-[500px] rounded-full bg-tertiary/5 blur-[140px] pointer-events-none z-0" />
 
       {/* Top Navigation Bar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0b1326]/75 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+      <nav className="fixed top-0 w-full z-50 bg-surface/75 backdrop-blur-md border-b border-outline-variant/60 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-[#020617] font-bold text-xl">terminal</span>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-md">
+              <span className="material-symbols-outlined text-white font-bold text-xl">database</span>
             </div>
-            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-[#c3c6d7]">
-              SQL<span className="text-primary">Agent</span>
+            <span className="text-lg font-extrabold tracking-wider text-on-surface">
+              Veridian<span className="text-primary">SQL</span>
             </span>
           </div>
           
-          <div className="flex gap-8 items-center">
-            <a href="#features" className="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors cursor-pointer hidden sm:block">
+          <div className="flex gap-6 sm:gap-8 items-center">
+            <a href="#features" className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant hover:text-primary transition-colors cursor-pointer hidden sm:block">
               Features
             </a>
-            <a href="#security" className="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors cursor-pointer hidden sm:block">
-              Security Model
+            <a href="#security" className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant hover:text-primary transition-colors cursor-pointer hidden sm:block">
+              Sandbox
             </a>
             <button 
               onClick={() => setView('workspace')}
-              className="bg-primary text-on-primary px-5 py-2 rounded-lg text-xs font-bold shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer"
+              className="bg-primary text-white hover:bg-primary/90 px-4.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-all duration-200 cursor-pointer active:scale-95 border-none"
             >
               Launch Workspace
             </button>
@@ -75,154 +76,153 @@ export default function Landing({ setView }) {
       <main className="pt-16 relative z-10">
         
         {/* Hero Section */}
-        <section className="relative min-h-[85vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 py-12 overflow-hidden border-b border-white/5">
+        <section className="relative min-h-[85vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 py-14 overflow-hidden border-b border-outline-variant/60 dotted-grid">
           {/* Animated Background Schema SVG */}
           <div className="absolute inset-0 z-0 opacity-10 pointer-events-none flex items-center justify-center">
             <div className="w-full h-full max-w-4xl max-h-[600px]">
               <svg className="w-full h-full" viewBox="0 0 800 600">
-                <path d="M400 300 L200 150 M400 300 L600 150 M400 300 L400 500 M200 150 L100 200 M600 150 L700 200" stroke="#b4c5ff" strokeDasharray="5,5" strokeWidth="1.5"></path>
-                <circle className="glow-node animate-pulse" cx="400" cy="300" fill="#b4c5ff" r="8"></circle>
-                <circle className="glow-node animate-float" cx="200" cy="150" fill="#b4c5ff" r="5"></circle>
-                <circle className="glow-node animate-float" style={{ animationDelay: '2s' }} cx="600" cy="150" fill="#4edea3" r="5"></circle>
-                <circle className="glow-node animate-float" style={{ animationDelay: '4s' }} cx="400" cy="500" fill="#d0bcff" r="5"></circle>
+                <path d="M400 300 L200 150 M400 300 L600 150 M400 300 L400 500 M200 150 L100 200 M600 150 L700 200" stroke="var(--color-outline)" strokeDasharray="6,6" strokeWidth="1.5"></path>
+                <circle className="glow-node animate-pulse" cx="400" cy="300" fill="var(--color-primary)" r="8"></circle>
+                <circle className="glow-node animate-float" cx="200" cy="150" fill="var(--color-primary)" r="5"></circle>
+                <circle className="glow-node animate-float" style={{ animationDelay: '2s' }} cx="600" cy="150" fill="var(--color-secondary)" r="5"></circle>
+                <circle className="glow-node animate-float" style={{ animationDelay: '4s' }} cx="400" cy="500" fill="var(--color-tertiary)" r="5"></circle>
               </svg>
             </div>
           </div>
 
           <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
             {/* Active Agent Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8 animate-fade-in">
-              <span className="relative flex h-2 w-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider mb-6 animate-fade-in">
+              <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
               </span>
               Self-Healing SQL Agent Active
             </div>
             
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight text-white max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight text-on-surface max-w-3xl">
               Talk to your database. <br />
               <span className="code-gradient">Safely and Semantically.</span>
             </h1>
             
-            <p className="text-base sm:text-lg md:text-xl text-[#c3c6d7] mb-10 max-w-2xl mx-auto leading-relaxed">
-              Connect your SQLite or PostgreSQL schema, query in plain English, and watch the agent resolve schema issues, block SQL injections, redact PII, and build clean reports.
+            <p className="text-sm sm:text-base md:text-lg text-on-surface-variant mb-10 max-w-2xl mx-auto leading-relaxed">
+              Connect your SQLite or PostgreSQL database, query in plain English, and watch the agent resolve schema issues, enforce AST blocks, redact sensitive PII, and generate PowerPoint slides.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md sm:max-w-none">
+            <div className="flex flex-col sm:flex-row gap-4.5 justify-center w-full max-w-xs sm:max-w-none">
               <button 
                 onClick={() => setView('workspace')}
-                className="bg-primary text-on-primary px-8 py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/15 hover:shadow-primary/30 hover:scale-[1.02] transition-all active:scale-98 cursor-pointer border-none"
+                className="bg-gradient-to-r from-primary to-secondary text-white px-7 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg hover:scale-[1.01] transition-all active:scale-95 cursor-pointer border-none"
               >
                 Open AI Workspace
               </button>
               <a 
                 href="#security"
-                className="border border-[#4edea3]/40 text-[#4edea3] bg-[#4edea3]/5 px-8 py-3.5 rounded-xl font-bold text-base hover:bg-[#4edea3]/15 hover:scale-[1.02] transition-all active:scale-98 text-center flex items-center justify-center cursor-pointer"
+                className="border border-secondary/30 text-secondary bg-secondary/5 px-7 py-3 rounded-xl font-bold text-sm hover:bg-secondary/10 hover:scale-[1.01] transition-all active:scale-95 text-center flex items-center justify-center cursor-pointer"
               >
-                View Security Sandbox
+                Launch Sandbox
               </a>
             </div>
           </div>
         </section>
 
         {/* Tech Stack Marquee */}
-        <section className="py-5 bg-surface-container-lowest/60 border-b border-white/5 overflow-hidden">
+        <section className="py-4 bg-surface-dim/45 border-b border-outline-variant/60 overflow-hidden select-none">
           <div className="w-full overflow-hidden relative">
-            {/* Fade overlays for smooth scrolling illusion */}
-            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#020617] to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#020617] to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-surface to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-surface to-transparent z-10 pointer-events-none" />
             
             <div className="flex animate-marquee whitespace-nowrap gap-16 items-center">
               {/* Iteration 1 */}
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> FastAPI Async Gateway
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> LangGraph Agentic Loop
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> ChromaDB Semantic Vectors
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> SQLGlot AST Safety Parser
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> SQLAlchemy Introspection
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> Gemini Pro AI Engine
               </span>
               
-              {/* Iteration 2 (Duplicate for seamless loop) */}
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              {/* Iteration 2 */}
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> FastAPI Async Gateway
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> LangGraph Agentic Loop
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> ChromaDB Semantic Vectors
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> SQLGlot AST Safety Parser
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> SQLAlchemy Introspection
               </span>
-              <span className="text-on-surface-variant/50 font-mono text-xs tracking-widest uppercase flex items-center gap-2">
+              <span className="text-on-surface-variant/50 font-mono text-[10px] tracking-widest uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary" /> Gemini Pro AI Engine
               </span>
             </div>
           </div>
         </section>
 
-        {/* Pillars / Features Grid (Interactive Bento Box Layout) */}
-        <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" id="features">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Enterprise Capabilities & Roadmap</h2>
-            <p className="text-on-surface-variant">Explore our live platform engines and upcoming collaborative whiteboard and automated alerting frameworks.</p>
+        {/* Pillars / Features Bento Grid */}
+        <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 select-none" id="features">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-on-surface mb-4">Enterprise Capabilities & Roadmap</h2>
+            <p className="text-on-surface-variant text-sm sm:text-base">Explore our live platform engines and upcoming collaborative whiteboard and automated alerting frameworks.</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             
-            {/* Bento Card 1: Self-Healing Loop (Wide - 2 Columns) */}
-            <div className="glass-card p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[60px] pointer-events-none" />
+            {/* Bento Card 1: Self-Healing Loop */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[320px]">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[65px] pointer-events-none" />
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-secondary/15 border border-secondary/25 flex items-center justify-center text-secondary shadow-inner">
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                     </div>
-                    <span className="bg-secondary/15 text-secondary border border-secondary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                      Active Engine
+                    <span className="bg-secondary/10 text-secondary border border-secondary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      Active Loop
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Self-Healing Execution Loop</h3>
-                  <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed">
-                    Catches query failures automatically. If a column or syntax mismatch occurs, the LangGraph loop feeds the traceback to the model, retrieves the index, and rewrites it.
+                  <h3 className="text-lg sm:text-xl font-bold text-on-surface mb-2">Self-Healing Execution Loop</h3>
+                  <p className="text-on-surface-variant text-xs sm:text-sm max-w-lg leading-relaxed">
+                    Catches query failures automatically. If a column or syntax mismatch occurs, the LangGraph loop feeds the traceback to the model, retrieves the index, and self-heals in real time.
                   </p>
                 </div>
 
                 {/* Animated Console Widget */}
-                <div className="mt-6 bg-[#020617] border border-white/5 rounded-xl p-3.5 font-mono text-[10px] sm:text-xs text-[#c3c6d7] space-y-2 relative overflow-hidden max-h-[110px] custom-scrollbar shadow-inner">
-                  <div className="flex items-center gap-2 text-white/40 pb-1.5 border-b border-white/5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+                <div className="mt-6 bg-surface border border-outline-variant/60 rounded-xl p-3.5 font-mono text-[10px] sm:text-xs text-on-surface-variant space-y-2 relative overflow-hidden max-h-[110px] custom-scrollbar shadow-inner text-left">
+                  <div className="flex items-center gap-2 text-on-surface-variant/40 pb-1.5 border-b border-outline-variant/60">
+                    <span className="w-2.5 h-2.5 rounded-full bg-error/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-tertiary/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-success/80" />
                     <span className="ml-1 text-[9px] uppercase tracking-wider font-semibold">Compiler Agent Trace</span>
                   </div>
-                  <div className="space-y-1 select-none">
-                    <div className="text-red-400 flex items-start gap-1">
-                      <span className="text-white/30">&gt;</span>
+                  <div className="space-y-1">
+                    <div className="text-error flex items-start gap-1">
+                      <span className="text-on-surface-variant/30">&gt;</span>
                       <span>[DB_ERROR] no such column: Customer.customerId</span>
                     </div>
-                    <div className="text-yellow-300 flex items-start gap-1 animate-pulse">
-                      <span className="text-white/30">&gt;</span>
+                    <div className="text-secondary flex items-start gap-1 animate-pulse">
+                      <span className="text-on-surface-variant/30">&gt;</span>
                       <span>[CHROMA] Resolved synonym "customerId" to SQLite field "CustomerId"</span>
                     </div>
-                    <div className="text-secondary flex items-start gap-1">
-                      <span className="text-white/30">&gt;</span>
+                    <div className="text-primary flex items-start gap-1">
+                      <span className="text-on-surface-variant/30">&gt;</span>
                       <span>[SUCCESS] Query corrected. Execution returned 5 records.</span>
                     </div>
                   </div>
@@ -230,186 +230,186 @@ export default function Landing({ setView }) {
               </div>
             </div>
 
-            {/* Bento Card 2: AST SQL Guardrails (Standard - 1 Column) */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between relative group min-h-[300px]">
+            {/* Bento Card 2: AST SQL Guardrails */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl flex flex-col justify-between relative group min-h-[320px]">
               <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-5">
                     <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>gpp_maybe</span>
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>gpp_maybe</span>
                     </div>
-                    <span className="bg-secondary/15 text-secondary border border-secondary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
                       Active
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">AST SQL Guardrails</h3>
-                  <p className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">
-                    Parsed SQL trees block commands like `DELETE` or catalog queries at the driver.
+                  <h3 className="text-base sm:text-lg font-bold text-on-surface mb-2">AST SQL Guardrails</h3>
+                  <p className="text-on-surface-variant text-xs leading-relaxed">
+                    Parsed SQL trees intercept malicious operations or unauthorized schema alterations (e.g. `DELETE`) directly at driver levels.
                   </p>
                 </div>
                 
                 {/* SVG Visual parser representation */}
-                <div className="mt-6 flex justify-center items-center h-20 bg-[#020617]/55 border border-white/5 rounded-xl relative overflow-hidden">
-                  <div className="flex gap-2 items-center">
-                    <div className="px-2 py-1 rounded bg-white/5 text-[9px] font-mono border border-white/10 text-[#d0bcff]">AST Root</div>
-                    <span className="text-white/30">→</span>
-                    <div className="px-2 py-1 rounded bg-red-950/40 text-[9px] font-mono border border-red-500/20 text-red-300">DELETE (Blocked)</div>
+                <div className="mt-6 flex justify-center items-center h-20 bg-surface border border-outline-variant/60 rounded-xl relative overflow-hidden">
+                  <div className="flex gap-2 items-center text-[10px] font-mono">
+                    <div className="px-2 py-1 rounded bg-surface-dim border border-outline/30 text-primary">AST Root</div>
+                    <span className="text-on-surface-variant/30">→</span>
+                    <div className="px-2 py-1 rounded bg-error-container/30 border border-error/20 text-error">DELETE (Blocked)</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bento Card 3: Semantic Vector Glossary (Standard - 1 Column) */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between relative group min-h-[300px]">
+            {/* Bento Card 3: Semantic Vector Glossary */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl flex flex-col justify-between relative group min-h-[320px]">
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center justify-center text-tertiary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-tertiary/15 border border-tertiary/25 flex items-center justify-center text-tertiary shadow-inner">
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
                     </div>
-                    <span className="bg-secondary/15 text-secondary border border-secondary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
                       Active
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">Semantic Glossary</h3>
-                  <p className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">
-                    Uses ChromaDB vectors to resolve company terminology to tables (e.g. "sales volume" → `Invoice.Total`).
+                  <h3 className="text-base sm:text-lg font-bold text-on-surface mb-2">Semantic Glossary</h3>
+                  <p className="text-on-surface-variant text-xs leading-relaxed">
+                    Indexes corporate abbreviations using ChromaDB vector database mappings, translating fuzzy logic columns on the fly.
                   </p>
                 </div>
                 
                 {/* Interactive mapping nodes */}
-                <div className="mt-6 grid grid-cols-2 gap-2 h-20 p-2.5 bg-[#020617]/55 border border-white/5 rounded-xl items-center text-[10px] font-mono">
-                  <div className="text-[#c3c6d7] text-center p-1 rounded border border-white/5 bg-white/[0.01]">"sales volume"</div>
-                  <div className="text-[#secondary] text-center p-1 rounded border border-secondary/20 bg-secondary/5 font-semibold text-secondary">Invoice.Total</div>
+                <div className="mt-6 grid grid-cols-2 gap-2 h-20 p-2.5 bg-surface border border-outline-variant/60 rounded-xl items-center text-[10px] font-mono">
+                  <div className="text-on-surface-variant text-center p-1 rounded border border-outline/35 bg-surface-dim">"sales volume"</div>
+                  <div className="text-secondary text-center p-1 rounded border border-secondary/20 bg-secondary/5 font-semibold">Invoice.Total</div>
                 </div>
               </div>
             </div>
 
-            {/* Bento Card 4: Dynamic PII Redaction (Wide - 2 Columns) */}
-            <div className="glass-card p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
-              <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none" />
+            {/* Bento Card 4: Dynamic PII Redaction */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl md:col-span-2 flex flex-col justify-between overflow-hidden relative group min-h-[320px]">
+              <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-[65px] pointer-events-none" />
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-5">
                     <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
                     </div>
-                    <span className="bg-secondary/15 text-secondary border border-secondary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                      Active Engine
+                    <span className="bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      Active
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Dynamic PII Redaction</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-on-surface mb-2">Dynamic PII Redaction</h3>
                   <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed">
-                    Secure database outputs dynamically. Column filtration adjusts sensitive attributes (phone numbers, billing logs, and home addresses) using custom role-based mapping hooks.
+                    Protect sensitive corporate attributes dynamically. Built-in hooks auto-redact email values, phone numbers, and addresses based on clearance levels.
                   </p>
                 </div>
 
                 {/* Micro role demo switcher */}
-                <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center bg-[#020617]/80 p-4 border border-white/5 rounded-xl">
+                <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center bg-surface-dim/45 p-4 border border-outline-variant/60 rounded-xl text-left select-none">
                   <div className="flex gap-2 sm:flex-col items-center">
-                    <button onClick={() => setActiveRole('admin')} className={`px-2 py-1 text-[9px] rounded uppercase font-bold border transition-all cursor-pointer ${activeRole==='admin'?'bg-secondary/10 border-secondary text-secondary':'border-white/5 text-white/40'}`}>Admin</button>
-                    <button onClick={() => setActiveRole('analyst')} className={`px-2 py-1 text-[9px] rounded uppercase font-bold border transition-all cursor-pointer ${activeRole==='analyst'?'bg-tertiary/10 border-tertiary text-tertiary':'border-white/5 text-white/40'}`}>Analyst</button>
-                    <button onClick={() => setActiveRole('general')} className={`px-2 py-1 text-[9px] rounded uppercase font-bold border transition-all cursor-pointer ${activeRole==='general'?'bg-primary/10 border-primary text-primary':'border-white/5 text-white/40'}`}>General</button>
+                    <button onClick={() => setActiveRole('admin')} className={`px-2.5 py-1 text-[9px] rounded-lg uppercase font-bold border transition-all cursor-pointer ${activeRole==='admin'?'bg-secondary/15 border-secondary text-secondary':'border-outline/35 text-on-surface-variant/40 bg-transparent'}`}>Admin</button>
+                    <button onClick={() => setActiveRole('analyst')} className={`px-2.5 py-1 text-[9px] rounded-lg uppercase font-bold border transition-all cursor-pointer ${activeRole==='analyst'?'bg-tertiary/15 border-tertiary text-tertiary':'border-outline/35 text-on-surface-variant/40 bg-transparent'}`}>Analyst</button>
+                    <button onClick={() => setActiveRole('general')} className={`px-2.5 py-1 text-[9px] rounded-lg uppercase font-bold border transition-all cursor-pointer ${activeRole==='general'?'bg-primary/15 border-primary text-primary':'border-outline/35 text-on-surface-variant/40 bg-transparent'}`}>General</button>
                   </div>
-                  <div className="flex-1 w-full text-xs font-mono text-[#c3c6d7] space-y-1 bg-[#020617] border border-white/5 p-2 rounded">
-                    <div><span className="text-white/40">Email:</span> {activeRole==='admin' ? 'luisg@embraer.com' : activeRole==='analyst' ? 'lu***g@embraer.com' : '[REDACTED]'}</div>
-                    <div><span className="text-white/40">Phone:</span> {activeRole==='admin' ? '+55 (12) 3923-555' : activeRole==='analyst' ? '+55 (12) XXX-XXX' : '[REDACTED]'}</div>
+                  <div className="flex-grow w-full text-xs font-mono text-on-surface space-y-1 bg-surface border border-outline-variant/60 p-2 rounded-lg">
+                    <div><span className="text-on-surface-variant/40">Email:</span> {activeRole==='admin' ? 'luisg@embraer.com.br' : activeRole==='analyst' ? 'lu***g@embraer.com.br' : '[REDACTED]'}</div>
+                    <div><span className="text-on-surface-variant/40">Phone:</span> {activeRole==='admin' ? '+55 (12) 3923-5555' : activeRole==='analyst' ? '+55 (12) XXXX-XXXX' : '[REDACTED]'}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bento Card 6: Pitch-Ready Exporter (Standard - 1 Column) */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between relative group min-h-[300px]">
+            {/* Bento Card 6: PowerPoint Exporter */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl flex flex-col justify-between relative group min-h-[320px]">
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-5">
                     <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>picture_as_pdf</span>
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>picture_as_pdf</span>
                     </div>
-                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
                       Roadmap
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">Pitch-Ready Exporter</h3>
-                  <p className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">
-                    Convert insights into dynamic corporate assets like vector PPTX slides, PDFs, or formatted Excel grids.
+                  <h3 className="text-base sm:text-lg font-bold text-on-surface mb-2">Slide Deck Exporter</h3>
+                  <p className="text-on-surface-variant text-xs leading-relaxed">
+                    Generate visual PPTX slide briefs, PDF analytical summaries, and grid excels in seconds.
                   </p>
                 </div>
                 
                 {/* Download visual buttons */}
-                <div className="mt-6 flex flex-col gap-1.5 select-none">
-                  <div className="flex items-center justify-between p-2 rounded bg-[#020617]/55 border border-white/5 text-[9px]">
-                    <span className="font-semibold text-[#eeefff]">sales_deck.pptx</span>
-                    <span className="material-symbols-outlined text-[#d0bcff] text-[14px]">download</span>
+                <div className="mt-6 flex flex-col gap-2 select-none">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-surface border border-outline-variant/60 text-[9px] font-mono">
+                    <span className="font-semibold text-on-surface">sales_deck.pptx</span>
+                    <span className="material-symbols-outlined text-primary text-[14px]">download</span>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded bg-[#020617]/55 border border-white/5 text-[9px]">
-                    <span className="font-semibold text-[#eeefff]">quarterly_sheet.xlsx</span>
-                    <span className="material-symbols-outlined text-[#4edea3] text-[14px]">download</span>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-surface border border-outline-variant/60 text-[9px] font-mono">
+                    <span className="font-semibold text-on-surface">quarterly_sheet.xlsx</span>
+                    <span className="material-symbols-outlined text-success text-[14px]">download</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bento Card 7: Anomaly Alerts Scheduler (Standard - 1 Column) */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between relative group min-h-[300px]">
+            {/* Bento Card 7: Anomaly Alerts Scheduler */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl flex flex-col justify-between relative group min-h-[320px]">
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications_active</span>
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-secondary/15 border border-secondary/25 flex items-center justify-center text-secondary shadow-inner">
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications_active</span>
                     </div>
-                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
                       Roadmap
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">"Smoke Detector"</h3>
-                  <p className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">
-                    Define scheduled rules in normal language. Bot queries anomaly metrics automatically using Celery Beat.
+                  <h3 className="text-base sm:text-lg font-bold text-on-surface mb-2">Smoke Detector Alerts</h3>
+                  <p className="text-on-surface-variant text-xs leading-relaxed">
+                    Establish SQL triggers using plain business rules to query database changes on schedule.
                   </p>
                 </div>
                 
                 {/* Pulsing indicator */}
-                <div className="mt-6 flex items-center justify-center h-20 bg-[#020617]/55 border border-white/5 rounded-xl">
-                  <span className="relative flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                <div className="mt-6 flex items-center justify-center h-20 bg-surface border border-outline-variant/60 rounded-xl text-[10px] font-mono">
+                  <span className="relative flex h-3.5 w-3.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-error"></span>
                   </span>
-                  <span className="ml-3 text-[10px] uppercase font-mono font-bold text-red-400">Anomaly Check: Triggered</span>
+                  <span className="ml-3 font-bold text-error uppercase tracking-wider animate-pulse">Watchdogs Active</span>
                 </div>
               </div>
             </div>
 
-            {/* Bento Card 8: Slack & Teams Messaging (Standard - 1 Column) */}
-            <div className="glass-card p-8 rounded-3xl flex flex-col justify-between overflow-hidden relative group min-h-[300px]">
+            {/* Bento Card 8: Slack & Teams Webhooks */}
+            <div className="glass-card p-7 sm:p-8 rounded-3xl flex flex-col justify-between overflow-hidden relative group min-h-[320px]">
               <div className="absolute inset-0 bg-gradient-to-r from-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="z-10 flex flex-col justify-between h-full">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-5">
                     <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-                      <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>chat</span>
                     </div>
-                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                      Roadmap Phase 5
+                    <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      Phase 5
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Slack & MS Teams Webhook Gateways</h3>
-                  <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed">
-                    Query the database agent from corporate channels. Use commands like `/data-agent "active users"` and receive charts and narratives compiled directly inside chat threads.
+                  <h3 className="text-lg sm:text-xl font-bold text-on-surface mb-2">Slack Webhook Gateways</h3>
+                  <p className="text-on-surface-variant text-xs sm:text-sm leading-relaxed">
+                    Query databases from corporate channels using commands like `/veridian "invoices total"`.
                   </p>
                 </div>
                 
                 {/* Chat bubble mockup */}
-                <div className="mt-6 bg-[#020617]/70 border border-white/5 rounded-xl p-3.5 flex gap-3 items-start select-none">
-                  <div className="w-7 h-7 rounded bg-[#4a154b] flex items-center justify-center font-bold text-white text-[10px]">S</div>
-                  <div className="flex-grow space-y-1">
+                <div className="mt-6 bg-surface border border-outline-variant/60 rounded-xl p-3 flex gap-2.5 items-start text-left select-none">
+                  <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center font-bold text-white text-[9px] shrink-0">V</div>
+                  <div className="flex-grow space-y-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-extrabold text-white">Slack App</span>
-                      <span className="bg-white/10 text-white/50 text-[7px] px-1 rounded uppercase font-bold">Bot</span>
+                      <span className="text-[9px] font-extrabold text-on-surface">Veridian App</span>
+                      <span className="bg-surface-container text-on-surface-variant/70 text-[6px] px-1 rounded font-bold uppercase">Bot</span>
                     </div>
-                    <div className="text-[10px] text-[#c3c6d7] leading-relaxed bg-[#020617] border border-white/5 p-2 rounded-lg inline-block">
-                      📊 <span className="font-bold text-[#4edea3]">Invoice total sales</span> resolved to <code className="bg-white/5 px-1 rounded text-primary font-mono text-[9px]">Invoice.Total</code>. Total Sum is <span className="font-bold text-white">$195,432.22</span>.
+                    <div className="text-[9px] text-on-surface-variant leading-relaxed bg-surface-dim border border-outline-variant/60 p-2 rounded-lg inline-block truncate max-w-full">
+                      📊 Invoice total sales resolved. Sum: <span className="font-bold text-on-surface">$195.4k</span>.
                     </div>
                   </div>
                 </div>
@@ -420,31 +420,31 @@ export default function Landing({ setView }) {
         </section>
 
         {/* Interactive Code/Agent Simulation */}
-        <section className="py-20 bg-surface-container-lowest/30 border-t border-b border-white/5" id="security">
+        <section className="py-20 bg-surface-dim/40 border-t border-b border-outline-variant/60" id="security">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3">Interactive Security Sandbox</h2>
-              <p className="text-on-surface-variant">Simulate how the agent parses SQL trees, enforces read-only access, and masks PII content based on user clearance role.</p>
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-on-surface mb-3">Interactive Security Sandbox</h2>
+              <p className="text-on-surface-variant text-sm sm:text-base">Simulate how the agent parses SQL trees, enforces read-only access, and masks PII content based on user clearance role.</p>
             </div>
             
             {/* Interactive Widget Box */}
-            <div className="glass-card rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col lg:flex-row">
+            <div className="glass-card rounded-3xl overflow-hidden border border-outline-variant/60 shadow-xl flex flex-col lg:flex-row text-left">
               
               {/* Left Sandbox Control Console */}
-              <div className="p-6 sm:p-8 lg:w-1/2 flex flex-col gap-6 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0b1326]/40">
+              <div className="p-6 sm:p-8 lg:w-1/2 flex flex-col gap-6 border-b lg:border-b-0 lg:border-r border-outline-variant/60 bg-surface-dim/20">
                 
                 {/* Step 1: Select Query Type */}
                 <div>
-                  <label className="text-xs uppercase tracking-widest font-semibold text-on-surface-variant block mb-3">
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant block mb-3">
                     Step 1: Choose Query Statement
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 select-none">
                     <button
                       onClick={() => setActiveQueryType('read')}
-                      className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-sm cursor-pointer transition-all duration-200 ${
+                      className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-xs cursor-pointer transition-all duration-200 uppercase tracking-wider ${
                         activeQueryType === 'read'
                           ? 'bg-primary/10 border-primary text-primary'
-                          : 'border-white/5 hover:bg-white/5 text-[#c3c6d7]'
+                          : 'border-outline/30 hover:bg-surface-container text-on-surface-variant bg-transparent'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">find_in_page</span>
@@ -452,10 +452,10 @@ export default function Landing({ setView }) {
                     </button>
                     <button
                       onClick={() => setActiveQueryType('write')}
-                      className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-sm cursor-pointer transition-all duration-200 ${
+                      className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-xs cursor-pointer transition-all duration-200 uppercase tracking-wider ${
                         activeQueryType === 'write'
-                          ? 'bg-error/10 border-error text-error'
-                          : 'border-white/5 hover:bg-white/5 text-[#c3c6d7]'
+                          ? 'bg-error/15 border-error text-error'
+                          : 'border-outline/30 hover:bg-surface-container text-on-surface-variant bg-transparent'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">delete_forever</span>
@@ -466,18 +466,18 @@ export default function Landing({ setView }) {
 
                 {/* Step 2: Select Role */}
                 <div className={activeQueryType === 'write' ? 'opacity-40 pointer-events-none' : ''}>
-                  <label className="text-xs uppercase tracking-widest font-semibold text-on-surface-variant block mb-3">
-                    Step 2: Choose Active Clearance Role
+                  <label className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant block mb-3">
+                    Step 2: Choose Clearance clearance role
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2.5 select-none">
                     {['general', 'analyst', 'admin'].map((role) => (
                       <button
                         key={role}
                         onClick={() => setActiveRole(role)}
-                        className={`py-2 px-3 rounded-lg border font-bold text-xs uppercase cursor-pointer transition-all duration-150 text-center ${
+                        className={`py-2 px-3 rounded-xl border font-bold text-[10px] uppercase cursor-pointer transition-all duration-150 text-center tracking-wider ${
                           activeRole === role
                             ? 'bg-secondary/15 border-secondary text-secondary'
-                            : 'border-white/5 hover:bg-white/5 text-[#c3c6d7]'
+                            : 'border-outline/30 hover:bg-surface-container text-on-surface-variant bg-transparent'
                         }`}
                       >
                         {role}
@@ -487,22 +487,22 @@ export default function Landing({ setView }) {
                 </div>
 
                 {/* Pipeline State Display */}
-                <div className="mt-4 pt-6 border-t border-white/5 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#4edea3] text-[20px]">psychology</span>
-                    <span className="text-xs uppercase tracking-widest font-semibold text-[#4edea3]">Natural Query Input</span>
+                <div className="mt-4 pt-6 border-t border-outline-variant/60 space-y-4">
+                  <div className="flex items-center gap-2 select-none">
+                    <span className="material-symbols-outlined text-success text-[20px]">psychology</span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-success">Natural Query Input</span>
                   </div>
-                  <div className="bg-[#020617] p-4 rounded-xl border border-white/5 text-sm leading-relaxed text-white">
+                  <div className="bg-surface p-4 rounded-xl border border-outline/30 text-xs leading-relaxed text-on-surface">
                     {activeQueryType === 'read' 
                       ? '"Get customers from Brazil and display their names and contact details"'
                       : '"Delete the customer record from Brazil to clear data logs"'}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 select-none">
                     <span className="material-symbols-outlined text-primary text-[20px]">terminal</span>
-                    <span className="text-xs uppercase tracking-widest font-semibold text-primary">Generated SQL Expression</span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-primary">Generated SQL Expression</span>
                   </div>
-                  <div className="bg-[#020617] p-4 rounded-xl border border-white/10 font-mono text-xs overflow-x-auto text-[#eeefff]">
+                  <div className="bg-surface p-4 rounded-xl border border-outline/30 font-mono text-xs overflow-x-auto text-secondary">
                     <code>{currentSim.query}</code>
                   </div>
                 </div>
@@ -510,22 +510,22 @@ export default function Landing({ setView }) {
               </div>
               
               {/* Right Sandbox Outputs Console */}
-              <div className="p-6 sm:p-8 lg:w-1/2 flex flex-col justify-between bg-surface-container-lowest/40">
+              <div className="p-6 sm:p-8 lg:w-1/2 flex flex-col justify-between bg-transparent">
                 
                 <div className="space-y-6">
                   {/* Title */}
-                  <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                  <div className="flex justify-between items-center pb-4 border-b border-outline-variant/60 select-none">
                     <div className="flex items-center gap-2 text-tertiary">
-                      <span className="material-symbols-outlined">policy</span>
-                      <span className="text-xs uppercase tracking-widest font-semibold">Security Pipeline Results</span>
+                      <span className="material-symbols-outlined text-lg">policy</span>
+                      <span className="text-[10px] uppercase tracking-wider font-bold">Security Pipeline Results</span>
                     </div>
                     {/* Badge */}
-                    <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                    <div className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border ${
                       currentSim.astPassed 
-                        ? 'bg-secondary/15 text-secondary border border-secondary/20' 
-                        : 'bg-error/15 text-error border border-error/20 animate-pulse'
+                        ? 'bg-success/15 text-success border-success/20' 
+                        : 'bg-error/15 text-error border-error/20 animate-pulse'
                     }`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <span className="w-1 h-1 rounded-full bg-current" />
                       {currentSim.astPassed ? 'PASSED' : 'BLOCKED'}
                     </div>
                   </div>
@@ -533,10 +533,10 @@ export default function Landing({ setView }) {
                   {/* AST Message */}
                   <div className={`p-4 rounded-xl text-xs font-semibold flex gap-3 items-start border ${
                     currentSim.astPassed 
-                      ? 'bg-secondary/5 border-secondary/20 text-[#70fbbe]' 
-                      : 'bg-error/5 border-error/20 text-[#ffb4ab]'
+                      ? 'bg-success-container/20 border-success/30 text-on-success-container' 
+                      : 'bg-error-container/20 border-error/30 text-on-error-container'
                   }`}>
-                    <span className="material-symbols-outlined text-[18px]">
+                    <span className="material-symbols-outlined text-[18px] shrink-0">
                       {currentSim.astPassed ? 'verified_user' : 'gpp_bad'}
                     </span>
                     <div>{currentSim.astMessage}</div>
@@ -544,30 +544,30 @@ export default function Landing({ setView }) {
 
                   {/* Data Result Grid or Blocked Display */}
                   <div>
-                    <label className="text-xs uppercase tracking-widest font-semibold text-on-surface-variant block mb-3">
+                    <label className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant block mb-3 select-none">
                       Pipeline Output Dataset
                     </label>
 
                     {currentSim.astPassed && currentSim.results ? (
-                      <div className="overflow-x-auto border border-white/5 rounded-xl bg-[#020617]/80">
+                      <div className="overflow-x-auto border border-outline-variant/60 rounded-xl bg-surface">
                         <table className="min-w-full text-left border-collapse text-xs">
                           <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.02] text-on-surface-variant">
-                              <th className="p-3 font-semibold">ID</th>
-                              <th className="p-3 font-semibold">Name</th>
-                              <th className="p-3 font-semibold">Email</th>
-                              <th className="p-3 font-semibold">Phone</th>
+                            <tr className="border-b border-outline-variant/60 bg-surface-dim/40 text-on-surface-variant text-[10px] uppercase font-bold">
+                              <th className="p-3">ID</th>
+                              <th className="p-3">Name</th>
+                              <th className="p-3">Email</th>
+                              <th className="p-3">Phone</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-white/5 text-white">
+                          <tbody className="divide-y divide-outline-variant/30 text-on-surface font-mono">
                             {currentSim.results[activeRole].map((row) => (
-                              <tr key={row.id} className="hover:bg-white/[0.01] transition-colors">
-                                <td className="p-3 text-on-surface-variant font-mono">{row.id}</td>
-                                <td className="p-3 font-medium">{row.first} {row.last}</td>
-                                <td className={`p-3 font-mono ${row.email === '[REDACTED]' ? 'text-error/80 font-bold' : 'text-[#d0bcff]'}`}>
+                              <tr key={row.id} className="hover:bg-surface-container-low/50 transition-colors">
+                                <td className="p-3 text-on-surface-variant">{row.id}</td>
+                                <td className="p-3 font-medium text-on-surface">{row.first} {row.last}</td>
+                                <td className={`p-3 ${row.email === '[REDACTED]' ? 'text-error font-bold' : 'text-secondary'}`}>
                                   {row.email}
                                 </td>
-                                <td className={`p-3 font-mono ${row.phone === '[REDACTED]' ? 'text-error/80 font-bold' : 'text-secondary'}`}>
+                                <td className={`p-3 ${row.phone === '[REDACTED]' ? 'text-error font-bold' : 'text-secondary'}`}>
                                   {row.phone}
                                 </td>
                               </tr>
@@ -576,11 +576,11 @@ export default function Landing({ setView }) {
                         </table>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center p-8 border border-dashed border-error/30 rounded-xl bg-error/[0.02]">
+                      <div className="flex flex-col items-center justify-center p-8 border border-dashed border-error/30 rounded-xl bg-error-container/20 select-none">
                         <span className="material-symbols-outlined text-error text-[40px] mb-2 animate-bounce">security_update_warning</span>
                         <div className="text-xs font-bold text-error uppercase tracking-wider">Statement Terminated</div>
                         <div className="text-center text-on-surface-variant text-xs mt-2 max-w-xs leading-relaxed">
-                          Execution aborted before database connection. The parsing parser detected forbidden writing commands.
+                          Execution aborted before database transaction context. The compiler detected writing command sets.
                         </div>
                       </div>
                     )}
@@ -588,9 +588,9 @@ export default function Landing({ setView }) {
                 </div>
 
                 {/* Bottom Footer Note */}
-                <div className="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-on-surface-variant text-[11px]">
+                <div className="mt-8 pt-4 border-t border-outline-variant/60 flex items-center gap-2 text-on-surface-variant text-[10px] select-none">
                   <span className="material-symbols-outlined text-[14px]">lock</span>
-                  Zero data is leaked. Role-based masking occurs immediately after query validation.
+                  Zero data is leaked. Role-based masking occurs immediately after AST validation.
                 </div>
 
               </div>
@@ -601,31 +601,31 @@ export default function Landing({ setView }) {
       </main>
 
       {/* Footer Section */}
-      <footer className="w-full border-t border-white/5 bg-[#060e20] py-12 mt-12 relative z-10">
+      <footer className="w-full border-t border-outline-variant/60 bg-surface-dim py-12 mt-12 relative z-10 select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-6">
           <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[#020617] text-sm font-bold">terminal</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7.5 h-7.5 rounded bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-sm font-bold">database</span>
               </div>
-              <span className="text-lg text-white font-bold">SQL Agent</span>
+              <span className="text-base text-on-surface font-extrabold">Veridian SQL</span>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-6 text-xs text-on-surface-variant">
-              <span className="hover:text-primary transition-colors cursor-default">GDPR Redaction Enforced</span>
-              <span className="text-white/10 hidden sm:inline">•</span>
-              <span className="hover:text-primary transition-colors cursor-default">Zero-Trust Role Control</span>
-              <span className="text-white/10 hidden sm:inline">•</span>
+            <div className="flex flex-wrap justify-center gap-6 text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
+              <span className="hover:text-primary transition-colors cursor-default">GDPR Masking Enforced</span>
+              <span className="text-outline-variant hidden sm:inline">•</span>
+              <span className="hover:text-primary transition-colors cursor-default">Zero-Trust Access Control</span>
+              <span className="text-outline-variant hidden sm:inline">•</span>
               <span className="hover:text-primary transition-colors cursor-default">Read-Only Safety Hook</span>
             </div>
           </div>
           
-          <div className="w-full border-t border-white/5 my-2" />
+          <div className="w-full border-t border-outline-variant/60 my-2" />
           
-          <div className="flex flex-col sm:flex-row justify-between w-full text-xs text-on-surface-variant/40 gap-4">
-            <p>© 2026 Enterprise AI SQL Agent. Built with FastAPI, LangGraph, and sqlglot.</p>
-            <p className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[12px] text-secondary">verified</span>
+          <div className="flex flex-col sm:flex-row justify-between w-full text-xs text-on-surface-variant/70 gap-4">
+            <p>© 2026 Veridian SQL. Built with FastAPI, LangGraph, and sqlglot.</p>
+            <p className="flex items-center gap-1.5 font-bold text-on-surface-variant">
+              <span className="material-symbols-outlined text-[13px] text-secondary">verified</span>
               Admin Control Center Active
             </p>
           </div>
@@ -634,4 +634,3 @@ export default function Landing({ setView }) {
     </div>
   );
 }
-

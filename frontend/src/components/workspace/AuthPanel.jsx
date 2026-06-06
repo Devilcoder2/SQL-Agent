@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export default function AuthPanel({ onAuthSuccess, setView }) {
   const [authMode, setAuthMode] = useState("login"); // 'login' | 'register'
@@ -82,114 +82,188 @@ export default function AuthPanel({ onAuthSuccess, setView }) {
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-[#020617] text-[#dae2fd] relative overflow-hidden font-sans select-text">
-      {/* Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none z-0" />
-      <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-secondary/5 blur-[150px] pointer-events-none z-0" />
+    <div className="h-screen w-screen flex bg-surface text-on-background overflow-hidden font-sans select-text">
+      
+      {/* Left Side: Visual Experience Sidebar */}
+      <aside className="hidden lg:flex lg:w-1/2 mesh-gradient flex-col justify-center items-center relative px-10 overflow-hidden text-left shrink-0">
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+          <div className="absolute top-[10%] left-[10%] w-64 h-64 border-2 border-white rounded-full"></div>
+          <div className="absolute bottom-[20%] right-[15%] w-96 h-96 border border-white rounded-2xl rotate-12"></div>
+        </div>
 
-      <div className="glass-card max-w-md w-full p-8 rounded-3xl border border-white/10 bg-[#0b1326]/60 backdrop-blur-xl shadow-2xl relative z-10 space-y-6">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
-            <span className="material-symbols-outlined text-[#020617] font-extrabold text-2xl">terminal</span>
+        <div className="relative z-10 max-w-lg text-center flex flex-col items-center">
+          <div className="mb-4">
+            <span className="inline-flex items-center px-4 py-1.5 bg-white/10 rounded-full text-white text-xs font-semibold uppercase tracking-widest backdrop-blur-sm">
+              Self-Healing SQL Engine
+            </span>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">AI SQL Agent Workspace</h2>
-          <p className="text-[#c3c6d7]/50 text-xs mt-1">Enterprise-grade secure natural language querying</p>
-        </div>
+          <h1 className="text-4xl font-extrabold text-white mb-6 leading-tight">
+            Talk to your database. Safely and Semantically.
+          </h1>
+          <p className="text-white/80 text-lg mb-10 leading-relaxed">
+            Veridian SQL translates plain English queries into secure execution paths, self-healing database schema errors and redacting sensitive PII dynamically.
+          </p>
 
-        {/* Mode switch */}
-        <div className="grid grid-cols-2 gap-2 bg-[#020617] p-1 rounded-xl border border-white/5">
-          <button 
-            onClick={() => { setAuthMode('login'); setAuthError(""); }}
-            className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${authMode === 'login' ? 'bg-primary text-[#020617]' : 'bg-transparent text-white/50'}`}
-          >
-            Sign In
-          </button>
-          <button 
-            onClick={() => { setAuthMode('register'); setAuthError(""); }}
-            className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${authMode === 'register' ? 'bg-primary text-[#020617]' : 'bg-transparent text-white/50'}`}
-          >
-            Register
-          </button>
-        </div>
-
-        {/* Tenant Switch */}
-        <div className="grid grid-cols-2 gap-2 bg-[#020617]/50 p-1 rounded-xl border border-white/5">
-          <button 
-            onClick={() => { setTenantType('single'); setAuthError(""); }}
-            className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer border-none ${tenantType === 'single' ? 'bg-secondary/15 text-secondary border border-secondary/20' : 'bg-transparent text-white/30'}`}
-          >
-            Single User
-          </button>
-          <button 
-            onClick={() => { setTenantType('enterprise'); setAuthError(""); }}
-            className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer border-none ${tenantType === 'enterprise' ? 'bg-secondary/15 text-secondary border border-secondary/20' : 'bg-transparent text-white/30'}`}
-          >
-            Enterprise
-          </button>
-        </div>
-
-        {authError && (
-          <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-300 text-xs rounded-lg text-center font-medium">
-            {authError}
-          </div>
-        )}
-
-        {/* Auth forms */}
-        <div className="space-y-4">
-          {tenantType === 'enterprise' && (
+          {/* Bento Preview Fragment */}
+          <div className="bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl p-6 flex items-center gap-4 text-left w-full max-w-md mx-auto hover:bg-white/15 hover:border-white/30 transition-all duration-300">
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
+            </div>
             <div>
-              <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Enterprise Name</label>
-              <input 
-                type="text" 
-                value={authMode === 'login' ? loginEnterpriseName : regEnterpriseName}
-                onChange={e => authMode === 'login' ? setLoginEnterpriseName(e.target.value) : setRegEnterpriseName(e.target.value)}
-                className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
-                placeholder="e.g. Acme Corp"
+              <div className="text-white font-bold text-base">AST Access Guardrails</div>
+              <div className="text-white/70 text-xs leading-normal">Enforcing strict read-only execution and role-based masking by default.</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Right Side: Auth Card */}
+      <main className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-10 bg-surface overflow-y-auto">
+        <div className="w-full max-w-[440px] space-y-6">
+          
+          {/* Branding Header */}
+          <div className="text-center flex flex-col items-center">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl primary-gradient-btn text-white mb-4 ambient-shadow overflow-hidden select-none">
+              <img 
+                alt="Veridian Logo" 
+                className="w-10 h-10 object-contain brightness-0 invert" 
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4IIl6iWvSVe7jsZjef6rqfaWaItDEOIf_9fHJ6elyCk6Wq4M7oFcjfAyIDkhDnUiWmNqBmwAeDjb1w2AV2-vJnSWKfpplYXEc4TBVZhq7qxeP9C1M9Vi6CSCg33JeZNBOYrmuGbsJ6AzD3ZrriETHHLafhwbSD-0Uq6dgQ7kfrnVIH_BMlRSR0mTAjMYRzI6Nsr0RMl2kkkMSjE0aSpAQB2Mkdqt4Bjl11A5c7nCGK6VIMf1Ef95oDw5Cl6Mtw11NOI6WsKwtdJ8"
               />
             </div>
-          )}
-
-          <div>
-            <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Username</label>
-            <input 
-              type="text" 
-              value={authMode === 'login' ? loginUsername : regUsername}
-              onChange={e => authMode === 'login' ? setLoginUsername(e.target.value) : setRegUsername(e.target.value)}
-              className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
-              placeholder="e.g. john_doe"
-            />
+            <h2 className="text-2xl font-bold text-primary">Veridian Workspace</h2>
+            <p className="text-on-surface-variant text-xs mt-1">Enterprise-grade secure natural language querying</p>
           </div>
 
-          <div>
-            <label className="text-[9px] uppercase font-extrabold text-white/30 block mb-1">Password</label>
-            <input 
-              type="password" 
-              value={authMode === 'login' ? loginPassword : regPassword}
-              onChange={e => authMode === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
-              className="w-full bg-[#020617] border border-white/5 rounded-xl text-xs px-3.5 py-2.5 text-white outline-none focus:border-primary/50"
-              placeholder="••••••••"
-              onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleRegister())}
-            />
+          {/* Auth Card Content */}
+          <div className="bg-white rounded-2xl p-6 lg:p-8 border border-outline-variant/60 shadow-xl relative overflow-hidden">
+            
+            {/* Mode Toggle */}
+            <div className="flex p-1 bg-surface-container-low rounded-xl mb-6 relative select-none">
+              <div 
+                className="absolute top-1 left-1 h-[calc(100%-8px)] rounded-lg transition-all duration-300 transform primary-gradient-btn"
+                style={{
+                  width: 'calc(50% - 4px)',
+                  transform: authMode === 'register' ? 'translateX(100%)' : 'translateX(0%)'
+                }}
+              ></div>
+              <button 
+                onClick={() => { setAuthMode('login'); setAuthError(""); }}
+                className={`relative z-10 w-1/2 py-2 text-xs font-bold transition-all duration-200 cursor-pointer border-none bg-transparent ${
+                  authMode === 'login' ? 'text-white' : 'text-on-surface-variant'
+                }`}
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => { setAuthMode('register'); setAuthError(""); }}
+                className={`relative z-10 w-1/2 py-2 text-xs font-bold transition-all duration-200 cursor-pointer border-none bg-transparent ${
+                  authMode === 'register' ? 'text-white' : 'text-on-surface-variant'
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            {/* Segmented User Type Toggle */}
+            <div className="flex border border-outline-variant/60 rounded-xl overflow-hidden mb-6 select-none">
+              <button 
+                onClick={() => { setTenantType('single'); setAuthError(""); }}
+                className={`flex-1 py-2 text-[10px] uppercase tracking-wider font-bold cursor-pointer border-none transition-all ${
+                  tenantType === 'single' 
+                    ? 'bg-secondary-container text-on-secondary-container' 
+                    : 'bg-transparent text-on-surface-variant/70 hover:bg-surface-container-low'
+                }`}
+              >
+                SINGLE USER
+              </button>
+              <button 
+                onClick={() => { setTenantType('enterprise'); setAuthError(""); }}
+                className={`flex-1 py-2 text-[10px] uppercase tracking-wider font-bold cursor-pointer border-none transition-all ${
+                  tenantType === 'enterprise' 
+                    ? 'bg-secondary-container text-on-secondary-container' 
+                    : 'bg-transparent text-on-surface-variant/70 hover:bg-surface-container-low'
+                }`}
+              >
+                ENTERPRISE
+              </button>
+            </div>
+
+            {authError && (
+              <div className="p-3 mb-4 bg-error-container/30 border border-error/20 text-error text-xs rounded-xl text-center font-medium leading-relaxed">
+                ⚠️ {authError}
+              </div>
+            )}
+
+            {/* Forms Container */}
+            <div className="space-y-4">
+              {tenantType === 'enterprise' && (
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5 tracking-wider select-none">Enterprise Name</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-[20px] select-none">domain</span>
+                    <input 
+                      type="text" 
+                      value={authMode === 'login' ? loginEnterpriseName : regEnterpriseName}
+                      onChange={e => authMode === 'login' ? setLoginEnterpriseName(e.target.value) : setRegEnterpriseName(e.target.value)}
+                      className="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/60 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-on-surface-variant/30 text-xs text-on-surface"
+                      placeholder="e.g. Acme Corp"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5 tracking-wider select-none">Username</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-[20px] select-none">person</span>
+                  <input 
+                    type="text" 
+                    value={authMode === 'login' ? loginUsername : regUsername}
+                    onChange={e => authMode === 'login' ? setLoginUsername(e.target.value) : setRegUsername(e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/60 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-on-surface-variant/30 text-xs text-on-surface"
+                    placeholder="e.g. john_doe"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5 tracking-wider select-none">Password</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-[20px] select-none">lock</span>
+                  <input 
+                    type="password" 
+                    value={authMode === 'login' ? loginPassword : regPassword}
+                    onChange={e => authMode === 'login' ? setLoginPassword(e.target.value) : setRegPassword(e.target.value)}
+                    className="w-full pl-11 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant/60 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-on-surface-variant/30 text-xs text-on-surface"
+                    placeholder="••••••••"
+                    onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleRegister())}
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={authMode === 'login' ? handleLogin : handleRegister}
+                className="w-full primary-gradient-btn text-white py-3 rounded-xl font-bold text-xs shadow-md active:scale-[0.98] transition-all hover:opacity-95 cursor-pointer border-none mt-2"
+              >
+                {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              </button>
+            </div>
           </div>
 
-          <button 
-            onClick={authMode === 'login' ? handleLogin : handleRegister}
-            className="w-full bg-gradient-to-r from-primary to-secondary text-[#020617] font-extrabold py-3 rounded-xl text-xs hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer border-none mt-2"
-          >
-            {authMode === 'login' ? 'Authenticate Session' : 'Create Account'}
-          </button>
+          {/* Navigation Back */}
+          <div className="text-center group select-none">
+            <button 
+              onClick={() => setView('landing')} 
+              className="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer bg-transparent border-none py-1 px-3"
+            >
+              <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              <span className="text-xs font-semibold">Back to Landing</span>
+            </button>
+          </div>
         </div>
+      </main>
 
-        <div className="text-center pt-2">
-          <button 
-            onClick={() => setView('landing')} 
-            className="text-[10px] text-white/40 hover:text-white/60 bg-transparent border-none cursor-pointer flex items-center gap-1.5 mx-auto"
-          >
-            <span className="material-symbols-outlined text-xs">arrow_back</span>
-            Back to Landing
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

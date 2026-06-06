@@ -1,4 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-undef */
+/* eslint-disable no-useless-escape */
+import { useState, useEffect, useRef } from 'react';
+
 
 export default function StudioTab({
   fetch,
@@ -18,6 +23,11 @@ export default function StudioTab({
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [widgetTitle, setWidgetTitle] = useState("");
   const [isPinning, setIsPinning] = useState(false);
+
+  // Drag split states
+  const [editorWidth, setEditorWidth] = useState(380);
+  const [editorOpen, setEditorOpen] = useState(true);
+  const [isResizing, setIsResizing] = useState(false);
 
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
@@ -61,6 +71,107 @@ export default function StudioTab({
     }
   }, [queryResults, query]);
 
+  // --- Chart.js Rendering Engine ---
+  function renderChart() {
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+
+    if (!queryResults || queryResults.length === 0 || !chartRef.current || !xAxisColumn || !yAxisColumn || !editorOpen) return;
+
+    const labels = queryResults.map(row => String(row[xAxisColumn] === null ? 'NULL' : row[xAxisColumn]));
+    const values = queryResults.map(row => {
+      const v = row[yAxisColumn];
+      return typeof v === "number" ? v : parseFloat(v) || 0;
+    });
+
+    const ctx = chartRef.current.getContext("2d");
+
+    // Veridian Light Accent palette (Forest green, Terracotta, Ochre, Sage, Charcoal, Clay)
+    const palette = [
+      "rgba(31, 111, 68, 0.75)",   // forest green
+      "rgba(200, 90, 50, 0.75)",   // terracotta
+      "rgba(217, 119, 6, 0.75)",    // ochre
+      "rgba(82, 183, 136, 0.75)",  // sage green
+      "rgba(92, 86, 79, 0.75)",    // charcoal
+      "rgba(227, 222, 203, 0.75)"  // clay
+    ];
+
+    const borderPalette = [
+      "#1f6f44", "#c85a32", "#d97706", "#52b788", "#5c564f", "#e3decb"
+    ];
+
+    // Background gradient for line/area
+    const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+    gradient.addColorStop(0, "rgba(31, 111, 68, 0.45)");
+    gradient.addColorStop(1, "rgba(200, 90, 50, 0.02)");
+
+    const isSingleColor = chartType === 'bar' || chartType === 'line';
+
+    const ChartClass = window.Chart || Chart;
+    if (!ChartClass) return;
+
+    const datasetConfig = {
+      label: yAxisColumn,
+      data: values,
+      backgroundColor: isSingleColor 
+        ? (chartType === 'line' ? gradient : "rgba(31, 111, 68, 0.5)")
+        : palette.slice(0, Math.max(labels.length, 6)),
+      borderColor: isSingleColor 
+        ? "#1f6f44" 
+        : borderPalette.slice(0, Math.max(labels.length, 6)),
+      borderWidth: 1.5,
+      borderRadius: chartType === 'bar' ? 5 : 0,
+      hoverBackgroundColor: isSingleColor 
+        ? "rgba(31, 111, 68, 0.7)" 
+        : undefined
+    };
+
+    if (chartType === 'line') {
+      datasetConfig.fill = true;
+      datasetConfig.tension = 0.35;
+      datasetConfig.pointBackgroundColor = "#c85a32";
+      datasetConfig.pointBorderColor = "#ffffff";
+      datasetConfig.pointHoverRadius = 5;
+    }
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: chartType === 'doughnut' || chartType === 'pie' ? 'right' : 'top',
+          labels: { color: "#5c564f", font: { family: "Inter", size: 10 } }
+        }
+      }
+    };
+
+    // Cartesian axes configuration (only for bar and line)
+    if (chartType === 'bar' || chartType === 'line') {
+      options.scales = {
+        x: {
+          grid: { color: "rgba(0, 0, 0, 0.03)" },
+          ticks: { color: "#5c564f", font: { family: "Inter", size: 9 } }
+        },
+        y: {
+          grid: { color: "rgba(0, 0, 0, 0.03)" },
+          ticks: { color: "#5c564f", font: { family: "Inter", size: 9 } }
+        }
+      };
+    }
+
+    chartInstance.current = new ChartClass(ctx, {
+      type: chartType,
+      data: {
+        labels: labels,
+        datasets: [datasetConfig]
+      },
+      options: options
+    });
+  }
+
   // Re-plot chart when results or config change
   useEffect(() => {
     renderChart();
@@ -70,7 +181,7 @@ export default function StudioTab({
         chartInstance.current = null;
       }
     };
-  }, [queryResults, chartType, xAxisColumn, yAxisColumn]);
+  }, [queryResults, chartType, xAxisColumn, yAxisColumn, editorOpen, editorWidth]);
 
   // Filter studio dataset based on query results and local search query
   const filteredResults = queryResults?.filter(row => 
@@ -177,139 +288,70 @@ export default function StudioTab({
     }
   };
 
-  // --- Chart.js Rendering Engine ---
-  const renderChart = () => {
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-      chartInstance.current = null;
-    }
 
-    if (!queryResults || queryResults.length === 0 || !chartRef.current || !xAxisColumn || !yAxisColumn) return;
 
-    const labels = queryResults.map(row => String(row[xAxisColumn] === null ? 'NULL' : row[xAxisColumn]));
-    const values = queryResults.map(row => {
-      const v = row[yAxisColumn];
-      return typeof v === "number" ? v : parseFloat(v) || 0;
-    });
+  // Helper to highlight search term match in grid table
+  const highlightText = (text, highlight) => {
+    if (!highlight.trim()) return text;
+    const parts = String(text === null ? 'NULL' : text).split(new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, index) => 
+      part.toLowerCase() === highlight.toLowerCase() 
+        ? <mark key={index} className="bg-amber-500/25 text-amber-200 px-0.5 rounded">{part}</mark> 
+        : part
+    );
+  };
 
-    const ctx = chartRef.current.getContext("2d");
-
-    // Colors
-    const palette = [
-      "rgba(180, 197, 255, 0.75)", // primary
-      "rgba(78, 222, 163, 0.75)",  // secondary
-      "rgba(208, 188, 255, 0.75)", // tertiary
-      "rgba(255, 180, 171, 0.75)", // error
-      "rgba(255, 204, 128, 0.75)", // warn
-      "rgba(128, 222, 234, 0.75)"  // info
-    ];
-
-    const borderPalette = [
-      "#b4c5ff", "#4edea3", "#d0bcff", "#ffb4ab", "#ffcc80", "#80deea"
-    ];
-
-    // Background gradient for line/area
-    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, "rgba(180, 197, 255, 0.45)");
-    gradient.addColorStop(1, "rgba(78, 222, 163, 0.02)");
-
-    const isSingleColor = chartType === 'bar' || chartType === 'line';
-
-    const ChartClass = window.Chart || Chart;
-    if (!ChartClass) return;
-
-    const datasetConfig = {
-      label: yAxisColumn,
-      data: values,
-      backgroundColor: isSingleColor 
-        ? (chartType === 'line' ? gradient : "rgba(180, 197, 255, 0.6)")
-        : palette.slice(0, Math.max(labels.length, 6)),
-      borderColor: isSingleColor 
-        ? "#b4c5ff" 
-        : borderPalette.slice(0, Math.max(labels.length, 6)),
-      borderWidth: 1.5,
-      borderRadius: chartType === 'bar' ? 6 : 0,
-      hoverBackgroundColor: isSingleColor 
-        ? "rgba(180, 197, 255, 0.8)" 
-        : undefined
+  // Drag Resizer Handlers
+  const startResize = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startW = editorWidth;
+    const onMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      setEditorWidth(Math.max(280, Math.min(600, startW - deltaX)));
     };
-
-    if (chartType === 'line') {
-      datasetConfig.fill = true;
-      datasetConfig.tension = 0.3;
-      datasetConfig.pointBackgroundColor = "#4edea3";
-      datasetConfig.pointBorderColor = "#ffffff";
-      datasetConfig.pointHoverRadius = 6;
-    }
-
-    const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: chartType === 'doughnut' || chartType === 'pie' ? 'right' : 'top',
-          labels: { color: "#c3c6d7", font: { family: "Inter", size: 10 } }
-        }
-      }
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     };
-
-    // Cartesian axes configuration (only for bar and line)
-    if (chartType === 'bar' || chartType === 'line') {
-      options.scales = {
-        x: {
-          grid: { color: "rgba(255, 255, 255, 0.03)" },
-          ticks: { color: "#c3c6d7", font: { family: "Inter", size: 9 } }
-        },
-        y: {
-          grid: { color: "rgba(255, 255, 255, 0.03)" },
-          ticks: { color: "#c3c6d7", font: { family: "Inter", size: 9 } }
-        }
-      };
-    }
-
-    chartInstance.current = new ChartClass(ctx, {
-      type: chartType,
-      data: {
-        labels: labels,
-        datasets: [datasetConfig]
-      },
-      options: options
-    });
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   // Extract column keys for axis selectors
   const datasetKeys = queryResults && queryResults.length > 0 ? Object.keys(queryResults[0]) : [];
 
   return (
-    <div className="h-full w-full grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden text-left relative">
+    <div className="h-full w-full flex overflow-hidden text-left relative gap-0 animate-fade-in">
       
       {/* Left/Center Column: Results Data Grid */}
-      <div className="glass-card rounded-2xl lg:col-span-2 flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
-        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
+      <div className="glass-card rounded-2xl flex-grow flex flex-col h-full overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-outline-variant flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-surface-dim/20 shrink-0 gap-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-xs uppercase tracking-wider font-semibold text-primary flex items-center gap-2">
+            <h3 className="text-xs uppercase tracking-wider font-extrabold text-primary flex items-center gap-2">
               <span className="material-symbols-outlined text-base">table_chart</span>
               Tabular Results Grid
             </h3>
-            <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] px-2 py-0.5 rounded font-bold">
+            <span className="bg-primary/10 text-primary border border-primary/20 text-[9px] px-2 py-0.5 rounded font-extrabold">
               {filteredResults.length} Rows
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
             <input
               type="text"
-              placeholder="Filter grid rows..."
+              placeholder="Filter grid columns..."
               value={studioSearch}
               onChange={e => setStudioSearch(e.target.value)}
-              className="bg-[#020617] border border-white/5 text-xs px-2.5 py-1.5 rounded-lg text-white focus:outline-none placeholder-white/20 outline-none w-32 sm:w-40"
+              className="bg-surface border border-outline/30 text-xs px-3 py-1.5 rounded-xl text-on-surface focus:outline-none placeholder-on-surface-variant/40 outline-none w-full sm:w-36 md:w-44 focus:border-primary/50 transition-colors"
             />
 
             <button
               onClick={handleExportExcel}
               disabled={!queryResults}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer border-none"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">grid_on</span>
               Excel
@@ -318,7 +360,7 @@ export default function StudioTab({
             <button
               onClick={handleExportPDF}
               disabled={!queryResults}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#4edea3]/20 bg-[#4edea3]/5 text-[#4edea3] hover:bg-[#4edea3]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer border-none"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-success/20 bg-success/5 text-success hover:bg-success/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
               PDF Report
@@ -327,41 +369,53 @@ export default function StudioTab({
             <button
               onClick={handleDownloadCSV}
               disabled={!queryResults || queryResults.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer border-none"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-outline/30 bg-surface-dim text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
               CSV
             </button>
+
+            <button
+              onClick={() => setEditorOpen(!editorOpen)}
+              className="text-on-surface-variant hover:text-primary transition-colors bg-transparent border-none cursor-pointer flex items-center p-1 rounded hover:bg-surface-container"
+              title={editorOpen ? "Collapse Chart Visualizer" : "Expand Chart Visualizer"}
+            >
+              <span className="material-symbols-outlined text-base">
+                {editorOpen ? "right_panel_close" : "analytics"}
+              </span>
+            </button>
           </div>
         </div>
 
-        <div className="flex-grow overflow-auto custom-scrollbar bg-[#020617]/50 h-full relative">
+        <div className="flex-grow overflow-auto custom-scrollbar h-full relative">
           {!queryResults ? (
-            <div className="text-xs text-[#c3c6d7]/40 italic py-16 text-center select-none">
-              No dataset loaded. Run a query in the Agent Console to preview results.
+            <div className="text-xs text-on-surface-variant/40 italic py-20 text-center select-none flex flex-col items-center justify-center gap-2 h-full">
+              <span className="material-symbols-outlined text-3xl opacity-40">grid_on</span>
+              <span>No dataset records loaded. Run a query in the Agent Console to preview results here.</span>
             </div>
           ) : filteredResults.length === 0 ? (
-            <div className="text-xs text-[#c3c6d7]/40 italic py-16 text-center select-none">
-              No records match the current filter.
+            <div className="text-xs text-on-surface-variant/40 italic py-20 text-center select-none flex flex-col items-center justify-center gap-2 h-full">
+              <span className="material-symbols-outlined text-3xl opacity-40">search_off</span>
+              <span>No records match the current filter terms.</span>
             </div>
           ) : (
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#131b2e]/60 text-primary uppercase tracking-wider font-bold sticky top-0 z-10 border-b border-white/5">
+              <thead className="bg-surface-dim border-b border-outline-variant/60 text-primary uppercase tracking-wider font-extrabold sticky top-0 z-10">
                 <tr>
                   {Object.keys(queryResults[0]).map(k => (
-                    <th key={k} className="px-4 py-3">{k}</th>
+                    <th key={k} className="px-4.5 py-3">{k}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-[#eeefff] font-mono">
+              <tbody className="divide-y divide-outline-variant/30 text-on-surface font-mono">
                 {filteredResults.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-white/[0.02] transition-colors border-b border-white/5">
+                  <tr key={idx} className="hover:bg-surface-container-low/50 transition-colors border-b border-outline-variant/30">
                     {Object.keys(queryResults[0]).map(k => {
                       const val = row[k];
                       const isRedacted = val === "[REDACTED]";
                       return (
-                        <td key={k} className={`px-4 py-3 ${isRedacted ? 'text-red-400 font-bold' : ''}`}>
-                          {val === null ? 'NULL' : String(val)}
+                        <td key={k} className={`px-4.5 py-3 ${isRedacted ? 'text-error font-bold' : ''}`}>
+                          {val === null ? 'NULL' : highlightText(val, studioSearch)}
                         </td>
                       );
                     })}
@@ -373,128 +427,142 @@ export default function StudioTab({
         </div>
       </div>
 
-      {/* Right Column: Visualizer Chart Canvas & Axis Builders */}
-      <div className="glass-card rounded-2xl flex flex-col h-full overflow-hidden border border-white/5 bg-[#0b1326]/20">
-        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01] shrink-0">
-          <h3 className="text-xs uppercase tracking-wider font-semibold text-secondary flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">analytics</span>
-            Visualization Editor
-          </h3>
-          {queryResults && (
-            <button
-              onClick={() => setPinModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1 bg-secondary/10 hover:bg-secondary/20 border border-secondary/25 text-secondary rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all border-none"
-              title="Pin this chart layout to Dashboard"
-            >
-              <span className="material-symbols-outlined text-xs">keep</span>
-              Pin to Dashboard
-            </button>
-          )}
-        </div>
-        
-        {/* Editor controls when data is loaded */}
-        {queryResults && queryResults.length > 0 && (
-          <div className="p-4 border-b border-white/5 bg-[#131b2e]/30 grid grid-cols-3 gap-3 shrink-0">
-            {/* Chart Type Selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase font-bold text-white/50 tracking-wider">Type</label>
-              <select
-                value={chartType}
-                onChange={e => setChartType(e.target.value)}
-                className="bg-[#020617] border border-white/10 rounded-lg text-xs py-1 px-2 text-[#dae2fd] focus:outline-none outline-none cursor-pointer"
-              >
-                <option value="bar">Bar Chart</option>
-                <option value="line">Line/Area</option>
-                <option value="doughnut">Doughnut</option>
-                <option value="pie">Pie Chart</option>
-                <option value="polarArea">Polar Arc</option>
-              </select>
-            </div>
-            {/* X Axis Selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase font-bold text-white/50 tracking-wider">X-Axis</label>
-              <select
-                value={xAxisColumn}
-                onChange={e => setXAxisColumn(e.target.value)}
-                className="bg-[#020617] border border-white/10 rounded-lg text-xs py-1 px-2 text-[#dae2fd] focus:outline-none outline-none cursor-pointer"
-              >
-                {datasetKeys.map(k => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
-            </div>
-            {/* Y Axis Selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase font-bold text-white/50 tracking-wider">Y-Axis</label>
-              <select
-                value={yAxisColumn}
-                onChange={e => setYAxisColumn(e.target.value)}
-                className="bg-[#020617] border border-white/10 rounded-lg text-xs py-1 px-2 text-[#dae2fd] focus:outline-none outline-none cursor-pointer"
-              >
-                {datasetKeys.map(k => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
+      {/* Draggable Splitter Handle */}
+      {editorOpen && (
+        <div 
+          className={`resizer-handle ${isResizing ? 'is-dragging' : ''}`}
+          onMouseDown={startResize}
+        />
+      )}
 
-        <div className="flex-grow p-6 flex items-center justify-center relative overflow-hidden h-full">
-          <canvas ref={chartRef} id="studio-chart" className="w-full h-full max-h-full"></canvas>
-          {!queryResults && (
-            <div className="absolute text-xs text-[#c3c6d7]/40 italic text-center select-none max-w-[200px]">
-              No charts plotted. Run a query in the Console and click Studio to activate.
+      {/* Right Column: Visualizer Chart Canvas & Axis Builders */}
+      {editorOpen && (
+        <div 
+          style={{ width: `${editorWidth}px` }}
+          className="glass-card rounded-2xl flex flex-col h-full overflow-hidden shrink-0 ml-1.5"
+        >
+          <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between bg-surface-dim/20 shrink-0 select-none">
+            <h3 className="text-xs uppercase tracking-wider font-extrabold text-secondary flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-base">analytics</span>
+              Visualizer Editor
+            </h3>
+            {queryResults && (
+              <button
+                onClick={() => setPinModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/15 hover:bg-secondary/25 border border-secondary/20 text-secondary rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+                title="Pin this chart layout to Dashboard"
+              >
+                <span className="material-symbols-outlined text-xs font-bold">keep</span>
+                Pin Chart
+              </button>
+            )}
+          </div>
+          
+          {/* Editor controls when data is loaded */}
+          {queryResults && queryResults.length > 0 && (
+            <div className="p-4.5 border-b border-outline-variant/60 bg-surface-dim/40 grid grid-cols-3 gap-3 shrink-0 select-none">
+              {/* Chart Type Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] uppercase font-bold text-on-surface-variant tracking-wider">Type</label>
+                <select
+                  value={chartType}
+                  onChange={e => setChartType(e.target.value)}
+                  className="bg-surface border border-outline/30 rounded-xl text-xs py-1.5 px-2 text-on-surface focus:outline-none outline-none cursor-pointer focus:border-primary/50 transition-colors"
+                >
+                  <option value="bar">Bar Chart</option>
+                  <option value="line">Line / Area</option>
+                  <option value="doughnut">Doughnut</option>
+                  <option value="pie">Pie Chart</option>
+                  <option value="polarArea">Polar Arc</option>
+                </select>
+              </div>
+              {/* X Axis Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] uppercase font-bold text-on-surface-variant tracking-wider">X-Axis</label>
+                <select
+                  value={xAxisColumn}
+                  onChange={e => setXAxisColumn(e.target.value)}
+                  className="bg-surface border border-outline/30 rounded-xl text-xs py-1.5 px-2 text-on-surface focus:outline-none outline-none cursor-pointer focus:border-primary/50 transition-colors"
+                >
+                  {datasetKeys.map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Y Axis Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] uppercase font-bold text-on-surface-variant tracking-wider">Y-Axis</label>
+                <select
+                  value={yAxisColumn}
+                  onChange={e => setYAxisColumn(e.target.value)}
+                  className="bg-surface border border-outline/30 rounded-xl text-xs py-1.5 px-2 text-on-surface focus:outline-none outline-none cursor-pointer focus:border-primary/50 transition-colors"
+                >
+                  {datasetKeys.map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
+
+          <div className="flex-grow p-5 flex items-center justify-center relative overflow-hidden h-full bg-surface-container-lowest/30">
+            <canvas ref={chartRef} id="studio-chart" className="w-full h-full max-h-full"></canvas>
+            {!queryResults && (
+              <div className="absolute text-xs text-on-surface-variant/40 italic text-center select-none max-w-[220px] flex flex-col items-center gap-1.5">
+                <span className="material-symbols-outlined text-3xl opacity-40">bar_chart</span>
+                <span>No charts plotted. Run a query in the Console first, then open Studio to chart.</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Pin to Dashboard Glass Modal */}
       {pinModalOpen && (
-        <div className="fixed inset-0 bg-[#020617]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card rounded-2xl border border-white/10 bg-[#0b1326]/90 p-6 max-w-md w-full flex flex-col gap-4 animate-scale-in">
-            <div className="flex justify-between items-center pb-2 border-b border-white/5">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+        <div className="fixed inset-0 bg-[#1e1b18]/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="glass-card rounded-2xl p-6 max-w-md w-full flex flex-col gap-4.5 animate-scale-in text-left">
+            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/60">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-secondary flex items-center gap-2">
                 <span className="material-symbols-outlined text-base">keep</span>
                 Pin Chart Widget
               </h3>
               <button
                 onClick={() => setPinModalOpen(false)}
-                className="text-[#c3c6d7] hover:text-white bg-transparent border-none cursor-pointer flex"
+                className="text-on-surface-variant hover:text-on-surface bg-transparent border-none cursor-pointer flex p-1 rounded hover:bg-surface-container transition-colors"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-[10px] uppercase font-bold text-white/40 tracking-wider">Widget Card Title</label>
+              <label className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Widget Card Title</label>
               <input
                 type="text"
                 value={widgetTitle}
                 onChange={e => setWidgetTitle(e.target.value)}
-                className="bg-[#020617] border border-white/10 rounded-xl text-xs py-2 px-3 text-white outline-none focus:border-primary/50"
+                className="bg-surface border border-outline/30 rounded-xl text-xs py-2.5 px-3.5 text-on-surface outline-none focus:border-primary/50 transition-colors placeholder-on-surface-variant/40"
                 placeholder="Name your chart widget..."
               />
             </div>
 
-            <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl text-[11px] text-[#c3c6d7] leading-relaxed flex flex-col gap-1">
-              <div><strong>Chart Settings:</strong></div>
-              <div>• Type: <span className="text-secondary font-mono">{chartType}</span></div>
-              <div>• Dimensions: <span className="text-primary font-mono">{xAxisColumn}</span> (X) × <span className="text-primary font-mono">{yAxisColumn}</span> (Y)</div>
-              <div className="truncate mt-1">• Query: <span className="italic">"{query}"</span></div>
+            <div className="p-3.5 bg-surface-dim/40 border border-outline-variant/60 rounded-xl text-xs text-on-surface-variant leading-relaxed flex flex-col gap-1.5 font-sans">
+              <div><strong>Chart Configurations:</strong></div>
+              <div>• Chart Layout Type: <span className="text-secondary font-mono font-bold capitalize">{chartType}</span></div>
+              <div>• Render Axes: <span className="text-primary font-mono font-bold">{xAxisColumn}</span> (X) × <span className="text-primary font-mono font-bold">{yAxisColumn}</span> (Y)</div>
+              <div className="truncate mt-1">• Chat Query context: <span className="italic">"{query || "Custom Query"}"</span></div>
             </div>
 
             <div className="flex gap-3 justify-end pt-2">
               <button
                 onClick={() => setPinModalOpen(false)}
-                className="px-4 py-2 border border-white/10 rounded-xl text-xs font-semibold text-[#c3c6d7] hover:text-white hover:bg-white/5 bg-transparent cursor-pointer transition border-none"
+                className="px-4.5 py-2.5 border border-outline/30 rounded-xl text-xs font-bold text-on-surface-variant hover:text-on-surface hover:bg-surface-container bg-transparent cursor-pointer transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePinWidget}
                 disabled={isPinning || !widgetTitle.trim()}
-                className="px-5 py-2 bg-gradient-to-r from-primary to-secondary text-[#020617] font-bold rounded-xl text-xs flex items-center gap-1 hover:shadow-lg hover:shadow-primary/10 active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition border-none"
+                className="px-5 py-2.5 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl text-xs flex items-center gap-1.5 hover:shadow-lg active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition"
               >
                 {isPinning ? "Pinning..." : "Confirm Pin"}
                 <span className="material-symbols-outlined text-sm font-extrabold">check</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Landing from './components/Landing';
 import Workspace from './components/Workspace';
 

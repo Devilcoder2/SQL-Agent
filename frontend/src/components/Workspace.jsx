@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useEffect } from 'react';
 import Sidebar from './workspace/Sidebar';
 import Header from './workspace/Header';
 import AuthPanel from './workspace/AuthPanel';
@@ -47,7 +49,7 @@ export default function Workspace({ setView }) {
   const [databases, setDatabases] = useState([]);
 
   // Global authenticated fetch wrapper
-  const fetchWrapper = async (url, options = {}) => {
+  async function fetchWrapper(url, options = {}) {
     const headers = options.headers || {};
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -60,9 +62,9 @@ export default function Workspace({ setView }) {
       handleLogout();
     }
     return response;
-  };
+  }
 
-  const fetchDatabases = async () => {
+  async function fetchDatabases() {
     if (!token) return;
     try {
       const res = await fetchWrapper("/api/v1/databases");
@@ -73,7 +75,7 @@ export default function Workspace({ setView }) {
     } catch (err) {
       console.error("Error loading databases:", err);
     }
-  };
+  }
 
   useEffect(() => {
     fetchDatabases();
@@ -99,7 +101,7 @@ export default function Workspace({ setView }) {
     setRole(newUser.role);
   };
 
-  const handleLogout = () => {
+  function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("workspaceTab");
@@ -108,7 +110,7 @@ export default function Workspace({ setView }) {
     setRole("general");
     changeWorkspaceTab("console");
     setView("landing");
-  };
+  }
 
   const handleQuerySuccess = (result) => {
     setQuery(result.query);
@@ -123,9 +125,9 @@ export default function Workspace({ setView }) {
   }
 
   return (
-    <div className="h-screen w-screen flex bg-[#020617] text-[#dae2fd] overflow-hidden select-none font-sans">
+    <div className="h-screen w-screen flex bg-surface text-on-surface overflow-hidden select-none font-sans">
       
-      {/* 1. Left Slim Sidebar */}
+      {/* 1. Left Sidebar */}
       <Sidebar 
         workspaceTab={workspaceTab} 
         setWorkspaceTab={changeWorkspaceTab} 
@@ -152,7 +154,7 @@ export default function Workspace({ setView }) {
         />
 
         {/* Workspace Active Views Render Window */}
-        <div className="flex-grow p-6 overflow-hidden bg-[#020617]">
+        <div className="flex-grow p-4 sm:p-6 pb-20 md:pb-6 overflow-hidden bg-surface">
           
           {/* VIEW A: Agent Console tab */}
           {workspaceTab === 'console' && (
