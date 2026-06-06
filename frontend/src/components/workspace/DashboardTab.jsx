@@ -113,22 +113,33 @@ function DashboardWidgetCard({ widget, onDelete }) {
     <div className="glass-card rounded-2xl border border-white/5 bg-[#0b1326]/20 flex flex-col h-[400px] overflow-hidden hover:translate-y-0 transition-transform">
       {/* Card Header */}
       <div className="px-5 py-3.5 border-b border-white/5 flex justify-between items-center bg-white/[0.01] shrink-0 select-none">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-white truncate max-w-[75%]" title={widget.title}>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-white truncate max-w-[50%]" title={widget.title}>
           {widget.title}
         </h4>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowMetrics(!showMetrics)}
-            className={`text-xs p-1 rounded hover:bg-white/5 transition-colors cursor-pointer bg-transparent border-none flex ${
-              showMetrics ? "text-primary" : "text-[#c3c6d7]"
-            }`}
-            title="Inspect widget SQL metrics"
-          >
-            <span className="material-symbols-outlined text-base">info</span>
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Pill Toggle Button */}
+          <div className="flex bg-[#131b2e] p-0.5 rounded-lg border border-white/5 text-[9px] font-bold uppercase select-none shrink-0">
+            <button
+              onClick={() => setShowMetrics(false)}
+              className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer border-none text-[9px] font-bold ${
+                !showMetrics ? "bg-primary text-[#020617]" : "text-[#c3c6d7] hover:text-white"
+              }`}
+            >
+              Chart
+            </button>
+            <button
+              onClick={() => setShowMetrics(true)}
+              className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer border-none text-[9px] font-bold ${
+                showMetrics ? "bg-primary text-[#020617]" : "text-[#c3c6d7] hover:text-white"
+              }`}
+            >
+              Details
+            </button>
+          </div>
+
           <button
             onClick={() => onDelete(widget.id)}
-            className="text-[#c3c6d7] hover:text-red-400 p-1 rounded hover:bg-white/5 transition-colors cursor-pointer bg-transparent border-none flex"
+            className="text-[#c3c6d7] hover:text-red-400 p-1 rounded hover:bg-white/5 transition-colors cursor-pointer bg-transparent border-none flex shrink-0"
             title="Unpin Chart Widget"
           >
             <span className="material-symbols-outlined text-base">delete</span>
@@ -138,8 +149,29 @@ function DashboardWidgetCard({ widget, onDelete }) {
 
       {/* Card Body */}
       <div className="flex-1 p-5 relative overflow-hidden flex items-center justify-center">
-        {showMetrics ? (
-          <div className="absolute inset-0 bg-[#020617]/95 p-5 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-left flex flex-col gap-3">
+        {/* The canvas/error wrappers are always kept mounted in the DOM */}
+        <div className="w-full h-full">
+          {widget.error ? (
+            <div className="flex flex-col items-center justify-center text-center p-4 max-w-xs space-y-2 h-full justify-center">
+              <span className="material-symbols-outlined text-red-400 text-3xl">report_problem</span>
+              <div className="text-xs font-bold text-white uppercase tracking-wider">Query Execution Failed</div>
+              <div className="text-[10px] text-red-300 font-mono line-clamp-3 leading-normal">
+                {widget.error}
+              </div>
+            </div>
+          ) : !widget.results || widget.results.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center p-4 space-y-1 select-none h-full justify-center">
+              <span className="material-symbols-outlined text-white/20 text-3xl">dataset</span>
+              <div className="text-xs font-semibold text-white/40">No dataset records found.</div>
+            </div>
+          ) : (
+            <canvas ref={chartRef} className="w-full h-full max-h-full"></canvas>
+          )}
+        </div>
+
+        {/* The metrics details panel overlays the canvas wrapper when active */}
+        {showMetrics && (
+          <div className="absolute inset-0 bg-[#020617]/95 p-5 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-left flex flex-col gap-3 z-10 animate-fade-in">
             <div>
               <span className="text-[9px] uppercase font-bold text-white/40 tracking-wider">Natural Query</span>
               <p className="text-[#dae2fd] italic">"{widget.query}"</p>
@@ -157,21 +189,6 @@ function DashboardWidgetCard({ widget, onDelete }) {
               </div>
             )}
           </div>
-        ) : widget.error ? (
-          <div className="flex flex-col items-center justify-center text-center p-4 max-w-xs space-y-2">
-            <span className="material-symbols-outlined text-red-400 text-3xl">report_problem</span>
-            <div className="text-xs font-bold text-white uppercase tracking-wider">Query Execution Failed</div>
-            <div className="text-[10px] text-red-300 font-mono line-clamp-3 leading-normal">
-              {widget.error}
-            </div>
-          </div>
-        ) : !widget.results || widget.results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center p-4 space-y-1 select-none">
-            <span className="material-symbols-outlined text-white/20 text-3xl">dataset</span>
-            <div className="text-xs font-semibold text-white/40">No dataset records found.</div>
-          </div>
-        ) : (
-          <canvas ref={chartRef} className="w-full h-full max-h-full"></canvas>
         )}
       </div>
     </div>

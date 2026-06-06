@@ -3,7 +3,9 @@ import Landing from './components/Landing';
 import Workspace from './components/Workspace';
 
 function App() {
-  const [view, setView] = useState('landing'); // 'landing' or 'workspace'
+  const [view, setView] = useState(() => {
+    return localStorage.getItem("token") ? 'workspace' : 'landing';
+  });
 
   return (
     <>

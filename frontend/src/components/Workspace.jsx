@@ -9,10 +9,14 @@ import AlertsTab from './workspace/AlertsTab';
 import UsersTab from './workspace/UsersTab';
 import DatabasesTab from './workspace/DatabasesTab';
 import DashboardTab from './workspace/DashboardTab';
-
 export default function Workspace({ setView }) {
   // Navigation State
-  const [workspaceTab, setWorkspaceTab] = useState("console");
+  const [workspaceTab, setWorkspaceTab] = useState(() => localStorage.getItem("workspaceTab") || "console");
+
+  const changeWorkspaceTab = (tab) => {
+    localStorage.setItem("workspaceTab", tab);
+    setWorkspaceTab(tab);
+  };
 
   // --- Auth Session State ---
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
@@ -51,7 +55,11 @@ export default function Workspace({ setView }) {
     if (activeDatabaseId) {
       headers["x-database-id"] = activeDatabaseId;
     }
-    return window.fetch(url, { ...options, headers });
+    const response = await window.fetch(url, { ...options, headers });
+    if (response.status === 401) {
+      handleLogout();
+    }
+    return response;
   };
 
   const fetchDatabases = async () => {
@@ -73,10 +81,13 @@ export default function Workspace({ setView }) {
 
   useEffect(() => {
     if (workspaceTab === 'alerts' && user?.can_view_alerts === false) {
-      setWorkspaceTab('console');
+      changeWorkspaceTab('console');
     }
     if (workspaceTab === 'schema' && user?.can_view_schema === false) {
-      setWorkspaceTab('console');
+      changeWorkspaceTab('console');
+    }
+    if ((workspaceTab === 'users' || workspaceTab === 'databases') && user?.role !== 'admin') {
+      changeWorkspaceTab('console');
     }
   }, [workspaceTab, user]);
 
@@ -91,10 +102,12 @@ export default function Workspace({ setView }) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("workspaceTab");
     setToken("");
     setUser(null);
     setRole("general");
-    setWorkspaceTab("console");
+    changeWorkspaceTab("console");
+    setView("landing");
   };
 
   const handleQuerySuccess = (result) => {
@@ -115,7 +128,7 @@ export default function Workspace({ setView }) {
       {/* 1. Left Slim Sidebar */}
       <Sidebar 
         workspaceTab={workspaceTab} 
-        setWorkspaceTab={setWorkspaceTab} 
+        setWorkspaceTab={changeWorkspaceTab} 
         user={user} 
         setView={setView} 
       />
@@ -151,7 +164,7 @@ export default function Workspace({ setView }) {
               generatedSql={generatedSql}
               narrativeResponse={narrativeResponse}
               activeDatabaseId={activeDatabaseId}
-              setWorkspaceTab={setWorkspaceTab}
+              setWorkspaceTab={changeWorkspaceTab}
             />
           )}
 
@@ -171,7 +184,7 @@ export default function Workspace({ setView }) {
             <DashboardTab
               fetch={fetchWrapper}
               activeDatabaseId={activeDatabaseId}
-              setWorkspaceTab={setWorkspaceTab}
+              setWorkspaceTab={changeWorkspaceTab}
             />
           )}
 
