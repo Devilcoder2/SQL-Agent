@@ -1,0 +1,44 @@
+# Version Control
+.git
+.gitignore
+
+# IDEs and OS files
+.vscode
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Frontend Node.js dependencies & builds
+frontend/node_modules
+frontend/dist
+frontend/build
+frontend/.svelte-kit
+frontend/.next
+
+# Python dependencies & environments
+backend/.venv
+backend/venv
+backend/env
+backend/ENV
+backend/__pycache__
+backend/*.py[cod]
+backend/*$py.class
+backend/.pytest_cache
+backend/.coverage
+backend/htmlcov
+backend/.mypy_cache
+
+# SQLite local databases & vector stores in data folder (should not be baked into base images if they are dynamic, but we can keep seed database files if needed. Chroma indexes should definitely be ignored if we want to build a clean index, or left out to avoid bloat).
+data/*.xlsx
+data/*.csv
+data/*.pdf
+
+# Local environment variables
+.env
+.env.*
+backend/.env
+frontend/.env
