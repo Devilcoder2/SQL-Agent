@@ -54,20 +54,13 @@ The Enterprise AI SQL Agent acts as a secure, smart intermediary layer:
 ```mermaid
 graph TD
     %% Presentation Layer
-    subgraph Presentation_Layer["Presentation Layer (React / Next.js)"]
-        A1["Interactive Web UI<br>(Glassmorphism overlays)"]
-        A2["Sleek Charts & tooltips<br>(Recharts / SVG)"]
-        A3["Multiplayer War Room<br>(Zustand & WebSockets)"]
-        A4["Monaco SQL Playground<br>(Auto-suggestions)"]
+    subgraph Presentation_Layer["Presentation Layer (React Web App)"]
+        FE["Interactive User Workspace UI<br>(Monaco Editor & Recharts Dashboard)"]
     end
 
     %% Backend Layer
-    subgraph Service_Layer["Backend Service Layer (FastAPI Gateway)"]
-        C1["API Gateway & WebSockets<br>(Session & Auth Router)"]
-        C2["Role-Based RBAC & PII Masker"]
-        C3["Database Connection Pool<br>(PostgreSQL / SQLite)"]
-        C4["Background Task Engine<br>(Asyncio Scheduler)"]
-        C5["Multi-Format Export Builder<br>(PDF / PPTX / XLSX)"]
+    subgraph Service_Layer["Backend Service Layer (FastAPI)"]
+        BE["FastAPI App Gateway<br>(Auth, Exports, Alerts, & PII Redactor)"]
     end
 
     %% AI Agent Layer
@@ -82,29 +75,26 @@ graph TD
 
     %% Storage Layer
     subgraph Storage_Layer["Data & State Storage Layer"]
-        E1[("Primary App DB<br>(users.db)")]
-        E2[("Audit Log DB<br>(audit.db)")]
-        E3[("ChromaDB Vector DB<br>(glossary index)")]
-        E4[("Target Enterprise DB<br>(chinook.db)")]
+        AppDB[("App & Audit SQLite DBs<br>(users.db / audit.db)")]
+        VectorDB[("ChromaDB Vector Store<br>(glossary & schemas)")]
+        TargetDB[("Target Enterprise DB<br>(chinook.db)")]
     end
 
-    A1 & A2 & A3 & A4 <-->|HTTP / WebSockets| C1
-    C1 <--> C2
-    C2 <--> C3
-    C1 <--> C4
-    C4 <--> C5
-    C1 <-->|Agent Context| D1
+    %% Connections
+    FE <-->|HTTP / WebSockets| BE
+    BE <-->|Agent Execution Context| D1
     
+    %% AI Agent Internal Flows
     D1 <--> D2
     D2 <--> D4
     D4 <--> D3
     D3 <--> D5
     D1 <--> D6
 
-    C1 & C4 <--> E1
-    C1 <--> E2
-    D6 <--> E3
-    C3 & D3 <-->|Read-Only Connection| E4
+    %% Storage Connections
+    BE <--> AppDB
+    D6 <--> VectorDB
+    BE & D3 <-->|Read-Only Execution| TargetDB
 ```
 
 ### Natural Language to Executable SQL (Self-Healing Loop) Flow
