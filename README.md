@@ -145,7 +145,7 @@ sequenceDiagram
     end
 
     BE->>AG: Send raw dataset
-    AG->>LLM: Synthesize: Generate TL;DR narrative summary
+    AG->>LLM: Synthesize: Generate TLDR narrative summary
     LLM-->>AG: Returns narrative brief
     AG-->>BE: Pack final response payload
     BE-->>FE: Stream narrative summary, tables, and recommended chart configs
