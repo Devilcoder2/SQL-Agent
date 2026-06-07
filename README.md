@@ -36,19 +36,25 @@ The Enterprise AI SQL Agent acts as a secure, smart intermediary layer:
 
 ## 3. Features
 
-* 📊 **Conversational Querying**: Natural Language to SQL translation with LLM-generated business narratives (TL;DR).
-* 🔧 **Self-Healing Engine**: LangGraph state machine automatically catches database execution errors and corrects them (up to 3 retries).
-* 🛡️ **AST Guardrails**: SQL parsing through `sqlglot` to enforce read-only execution and block table drops or unauthorized catalog access.
-* 🎭 **PII Masking Filter**: Dynamic role-based redaction of emails, phone numbers, and addresses (Admin: full views, Analyst: obfuscated, General User: redacted).
-* 📉 **Dynamic Chart Dashboards**: Interactive, glassmorphic dashboards using Recharts with real-time query executions.
-* 🚨 **Proactive Alerts ("Smoke Detector")**: Background asyncio-scheduled checks monitoring critical metrics and logging threshold breaches.
-* 👥 **Collaborative War Rooms**: Multiplayer canvas synchronizer tracking cursor coordinates and shared board updates over WebSockets.
-* 📥 **Multi-Format Exports**: One-click slide decks (`pptx`), spreadsheet models (`xlsx` with SUM formulas), and document briefs (`pdf`).
-* 🔌 **Slack Webhooks**: Bi-directional webhook controller supporting slash query commands (`/data-agent`).
+* **Conversational Querying**: Natural Language to SQL translation with LLM-generated business narratives (TL;DR).
+* **Self-Healing Engine**: LangGraph state machine automatically catches database execution errors and corrects them (up to 3 retries).
+* **AST Guardrails**: SQL parsing through `sqlglot` to enforce read-only execution and block table drops or unauthorized catalog access.
+* **PII Masking Filter**: Dynamic role-based redaction of emails, phone numbers, and addresses (Admin: full views, Analyst: obfuscated, General User: redacted).
+* **Dynamic Chart Dashboards**: Interactive, glassmorphic dashboards using Recharts with real-time query executions.
+* **Proactive Alerts ("Smoke Detector")**: Background asyncio-scheduled checks monitoring critical metrics and logging threshold breaches.
+* **Collaborative War Rooms**: Multiplayer canvas synchronizer tracking cursor coordinates and shared board updates over WebSockets.
+* **Multi-Format Exports**: One-click slide decks (`pptx`), spreadsheet models (`xlsx` with SUM formulas), and document briefs (`pdf`).
+* **Slack Webhooks**: Bi-directional webhook controller supporting slash query commands (`/data-agent`).
 
 ---
 
-## 4. Architectural & Flow Diagrams
+## 4. Application Screenshots
+
+<!-- Add your application screenshots and product tour photos here -->
+
+---
+
+## 5. Architectural & Flow Diagrams
 
 ### High-Level System Architecture
 ```mermaid
@@ -145,7 +151,7 @@ sequenceDiagram
 
 ---
 
-## 5. Tech Stack
+## 6. Tech Stack
 
 * **Frontend**: React 19, Vite, TailwindCSS (for utility layout), Zustand (for multiplayer state management), Recharts (responsive SVG graphs), Monaco Editor (interactive code playground).
 * **Backend**: FastAPI (Python 3.11), SQLAlchemy ORM (asyncpg, aiomysql, aiosqlite pools), SQLGlot (AST parsing).
@@ -155,7 +161,7 @@ sequenceDiagram
 
 ---
 
-## 6. Project Folder Structure
+## 7. Project Folder Structure
 
 ```
 SQL Agent/
@@ -195,7 +201,7 @@ SQL Agent/
 
 ---
 
-## 7. Local Setup
+## 8. Local Setup
 
 ### Step 1: Clone the Repository
 ```bash
@@ -241,7 +247,7 @@ cd SQL-Agent
 
 ---
 
-## 8. API Endpoints
+## 9. API Endpoints
 
 ### Authentication Gateway
 * `POST /api/v1/auth/register` - Create new user account.
@@ -274,7 +280,7 @@ cd SQL-Agent
 
 ---
 
-## 9. Limitations & Future Enhancements
+## 10. Limitations & Future Enhancements
 
 ### Limitations
 1. **SQLite Default Focus**: The generated agent logic defaults to SQLite queries. Although the connection pools support Postgres and MySQL, the dialect engine requires database selection flags in production for absolute dialect accuracy.
