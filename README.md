@@ -49,8 +49,16 @@ The Enterprise AI SQL Agent acts as a secure, smart intermediary layer:
 ---
 
 ## 4. Application Screenshots
+<img width="1467" height="879" alt="Screenshot 2026-06-07 at 1 52 52 PM" src="https://github.com/user-attachments/assets/97215807-7274-446d-a47e-2e46aac3cb89" />
 
-<!-- Add your application screenshots and product tour photos here -->
+<img width="1466" height="883" alt="Screenshot 2026-06-07 at 1 53 05 PM" src="https://github.com/user-attachments/assets/fb2c4b0e-b661-479d-b1d9-75a882b96664" />
+
+<img width="1469" height="880" alt="Screenshot 2026-06-07 at 1 53 22 PM" src="https://github.com/user-attachments/assets/991c605c-4bf9-40d2-9291-71547632e2ba" />
+
+<img width="1453" height="884" alt="Screenshot 2026-06-07 at 1 53 37 PM" src="https://github.com/user-attachments/assets/3e0000db-70b3-4fbc-bf4f-d90365632ac0" />
+
+
+
 
 ---
 
