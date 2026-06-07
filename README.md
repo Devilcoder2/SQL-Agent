@@ -5,6 +5,7 @@ An intelligent, self-healing, and secure Natural Language to SQL dashboard and c
 > [!TIP]
 > **Live Demo Test Credentials**:
 > If you are testing the live deployed version, you can log in using the following credentials:
+> * **Live Link**: `https://enterprise-sql-agent.onrender.com/`
 > * **Username**: `test`
 > * **Password**: `test`
 
